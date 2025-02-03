@@ -13,24 +13,6 @@ using namespace aurora;
 
 int main(int argc, char* argv[])
 {
-	// u8PixelBuffer pixelBuffer{ 1280, 720 };
-	// pixelBuffer.Fill(u8Vec3{ 255, 0, 0 });
-
-	// f32PixelBuffer pixelBuffer{ 1280, 720 };
-	// pixelBuffer.Fill(Vec3{ 1.0f, 0.0f, 0.0f });
-
-	// PpmImageProps ppmImageProps{};
-	// ppmImageProps.fileName = "out.ppm";
-	// ppmImageProps.maxColorValue = 255;
-	// ppmImageProps.ppmImageFormat = PpmImageFormat::ASCII;
-	// ppmImageProps.ppmImageFormat = PpmImageFormat::BINARY;
-
-	// PpmImageWriter* imageWriter = CreateImageWriter(ppmImageProps);
-	// imageWriter->WritePixels(pixelBuffer);
-
-	// DeleteImageWriter(imageWriter);
-
-
 	std::filesystem::path exePath{ argv[0] };
 	exePath.remove_filename();
 

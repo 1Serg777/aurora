@@ -39,8 +39,8 @@ namespace aurora
 
 	void PpmImageWriter::WriteImageHeader(std::ostream& os, uint32_t imageWidth, uint32_t imageHeight) const
 	{
-		// Write the "PPM" header into the file with "ppmProps.fileName" name
-		// Create a file first, if a file with "ppmProps.fileName" name doesn't exist
+		// Write the "PPM" header into the file named "ppmProps.fileName".
+		// Create the file first if it doesn't exist.
 
 		os << GetImageFormatMagicNumber() << "\n"
 			<< imageWidth << " " << imageHeight << "\n"
@@ -85,7 +85,9 @@ namespace aurora
 	{
 		// Clamp values of each channel?
 
-		os << pixel.r << " " << pixel.g << " " << pixel.b << "\n";
+		numa::i64Vec3 clampedPixel = numa::Clamp(pixel, numa::i64Vec3(0), numa::i64Vec3(255));
+
+		os << clampedPixel.r << " " << clampedPixel.g << " " << clampedPixel.b << "\n";
 	}
 	void PpmAsciiImageWriter::WriteFloatPixel(std::ostream& os, const numa::dVec3& pixel)
 	{
@@ -123,11 +125,12 @@ namespace aurora
 	void PpmBinaryImageWriter::WriteFloatPixel(std::ostream& os, const numa::dVec3& pixel)
 	{
 		numa::dVec3 clampedFloatPixel = numa::Clamp(pixel, numa::dVec3(0.0f), numa::dVec3(1.0f));
-		numa::i64Vec3 intPixel{};
 
-		intPixel.r = static_cast<int64_t>(clampedFloatPixel.r * 255.0f);
-		intPixel.g = static_cast<int64_t>(clampedFloatPixel.g * 255.0f);
-		intPixel.b = static_cast<int64_t>(clampedFloatPixel.b * 255.0f);
+		numa::i64Vec3 intPixel{
+			static_cast<int64_t>(clampedFloatPixel.r * 255.0f),
+			static_cast<int64_t>(clampedFloatPixel.g * 255.0f),
+			static_cast<int64_t>(clampedFloatPixel.b * 255.0f),
+		};
 
 		WriteBinaryPixel(os, intPixel);
 	}
@@ -143,27 +146,5 @@ namespace aurora
 		// os << binaryPixel;
 
 		os.write(reinterpret_cast<char*>(&binaryPixel), 3);
-	}
-
-	PpmImageWriter* CreateImageWriter(const PpmImageProps& ppmImageProps)
-	{
-		PpmImageWriter* imageWriter{ nullptr };
-		if (ppmImageProps.ppmImageFormat == PpmImageFormat::ASCII)
-		{
-			imageWriter = new PpmAsciiImageWriter(ppmImageProps);
-		}
-		else if (ppmImageProps.ppmImageFormat == PpmImageFormat::BINARY)
-		{
-			imageWriter = new PpmBinaryImageWriter(ppmImageProps);
-		}
-		else
-		{
-			assert(false && "Unsupported PPM Image Format provided!");
-		}
-		return imageWriter;
-	}
-	void DeleteImageWriter(PpmImageWriter* imageWriter)
-	{
-		delete imageWriter;
 	}
 }

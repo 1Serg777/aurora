@@ -22,7 +22,6 @@ namespace aurora
 
 	private:
 
-		// std::shared_ptr<u8PixelBuffer> pixelBuffer;
 		std::shared_ptr<f32PixelBuffer> pixelBuffer;
 
 		bool multisampling{ false };

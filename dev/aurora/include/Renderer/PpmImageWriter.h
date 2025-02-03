@@ -117,7 +117,4 @@ namespace aurora
 
 		void WriteBinaryPixel(std::ostream& os, const numa::i64Vec3& pixel);
 	};
-
-	PpmImageWriter* CreateImageWriter(const PpmImageProps& ppmImageProps);
-	void DeleteImageWriter(PpmImageWriter* imageWriter);
 }

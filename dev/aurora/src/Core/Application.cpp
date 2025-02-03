@@ -16,8 +16,8 @@ namespace aurora
 	}
 	void Application::Terminate()
 	{
-		imageWriter.reset();
 		pathTracer.reset();
+		imageWriter.reset();
 	}
 
 	void Application::Run()

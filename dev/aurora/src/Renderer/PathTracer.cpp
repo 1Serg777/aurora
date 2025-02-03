@@ -17,7 +17,8 @@ namespace aurora
 		pixelBuffer.reset();
 		pixelBuffer = std::make_shared<f32PixelBuffer>(resolutionX, resolutionY);
 
-		ClearPixelBuffer(numa::Vec3{ 0.15f, 0.11f, 0.49f });
+		numa::Vec3 clearColor{ 0.15f, 0.11f, 0.49f };
+		ClearPixelBuffer(clearColor);
 	}
 
 	const f32PixelBuffer* PathTracer::GetPixelBuffer() const
