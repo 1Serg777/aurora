@@ -1,0 +1,3 @@
+[submodule "dependencies/numa"]
+	path = dependencies/numa
+	url = https://github.com/1Serg777/numa.git

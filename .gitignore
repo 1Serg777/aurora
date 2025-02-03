@@ -1,0 +1,45 @@
+# Directories
+build/
+
+bin/
+bin-int/
+
+x86/
+x64/
+
+[Dd]ebug/
+[Rr]elease/
+
+[Ww][Ii][Nn]32/
+
+[Bb]in/
+[Oo]bj/
+
+# Representative .ppm images
+img/
+
+# Hidden Directories
+.git/
+.vs/
+.vscode/
+
+# Files
+.sln
+.vcxproj
+.filters
+.user
+
+# .obj
+# .lib
+# .exe
+
+# .txt
+# .md
+
+.idb
+.pdb
+.log
+.ilk
+.recipe
+.tlog
+.lastbuildstate
