@@ -1,8 +1,19 @@
 #include "Renderer/PathTracer.h"
 
+#include "Framework/Actor.h"
 #include "Framework/Camera.h"
+
+#include "Framework/Components/Geometry.h"
+#include "Framework/Components/Material.h"
+
+#include "Framework/Geometry/Sphere.h"
+#include "Framework/Geometry/Plane.h"
+
+#include "Framework/Materials/Lambertian.h"
+
 #include "Framework/Gradient.h"
 
+#include "Numa.h"
 #include "Random.h"
 #include "Vec3.hpp"
 
@@ -22,6 +33,25 @@ namespace aurora
 
 		// numa::Vec3 clearColor{ 0.15f, 0.11f, 0.49f };
 		// ClearPixelBuffer(clearColor);
+
+		// 1. Sphere
+
+		std::shared_ptr<Actor> redSphereActor = std::make_shared<Actor>("red_sphere");
+
+		std::shared_ptr<Transform> redSphereTransform = std::make_shared<Transform>();
+		redSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, -3.0f });
+		redSphereTransform->SetRotation(numa::Vec3{ numa::Rad(0.0f), numa::Rad(0.0f), numa::Rad(0.0f) });
+
+		float sphereRadius{ 1.0f };
+		std::shared_ptr<Sphere> sphereGeometry = std::make_shared<Sphere>(sphereRadius);
+
+		// numa::Vec3 sphereMatAlbedo{ 1.0f, 0.0f, 0.0f };
+		numa::Vec3 sphereMatAlbedo{ 0.8f, 0.8f, 0.8f };
+		std::shared_ptr<Lambertian> sphereMaterial = std::make_shared<Lambertian>(sphereMatAlbedo);
+
+		redSphereActor->SetTransform(redSphereTransform);
+		redSphereActor->SetGeometry(sphereGeometry);
+		redSphereActor->SetMaterial(sphereMaterial);
 
 		Camera sceneCamera{
 			resolutionX, resolutionY,
@@ -43,12 +73,26 @@ namespace aurora
 			{
 				size_t current_pixel_idx = static_cast<size_t>(y) * resolutionX + x;
 
-				numa::Ray ray = sceneCamera.GenerateCameraRay(x, y);
+				numa::Ray cameraRay = sceneCamera.GenerateCameraRay(x, y);
 
-				float t = ray.GetDirection().y * 0.5f + 0.5f;
+				float t = cameraRay.GetDirection().y * 0.5f + 0.5f;
 				numa::Vec3 bgColor = skyGradient.GetColor(t);
 
-				pixelBuffer->WritePixel(x, y, bgColor);
+				numa::Vec3 pixelColor{};
+
+				ActorRayHit actorHit{};
+				redSphereActor->Intersect(cameraRay, actorHit);
+
+				if (!actorHit.hit)
+				{
+					pixelColor = bgColor;
+				}
+				else
+				{
+					pixelColor = actorHit.hitNormal * 0.5f + numa::Vec3{ 0.5f };
+				}
+
+				pixelBuffer->WritePixel(x, y, pixelColor);
 
 				// RenderPixel(x, y, *scene);
 			}

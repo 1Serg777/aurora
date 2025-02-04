@@ -34,6 +34,7 @@ namespace aurora
 		if (!geometryHit.hit || rayHit.HitBehind())
 		{
 			geometryHit.hit = false;
+			return geometryHit.hit;
 		}
 
 		// It's either a 'single' hit or a 'double' hit.
