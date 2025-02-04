@@ -17,7 +17,9 @@ namespace aurora
 		}
 
 		bool hit = geometry->Intersect(ray, rayHit);
-		if (hit)
+		rayHit.hit = hit;
+
+		if (rayHit.hit)
 		{
 			rayHit.hitActor = this;
 		}

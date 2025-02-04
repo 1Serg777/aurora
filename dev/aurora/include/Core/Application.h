@@ -2,6 +2,7 @@
 
 #include "Renderer/PathTracer.h"
 #include "Renderer/PpmImageWriter.h"
+#include "Scene/SceneManager.h"
 
 #include <filesystem>
 #include <memory>
@@ -34,9 +35,15 @@ namespace aurora
 
 		void CreateImageWriter();
 
+		void CreateDemoScene();
+
+		void RenderScene(std::shared_ptr<Scene> scene);
+
 		std::filesystem::path exePath{};
 
 		std::unique_ptr<PathTracer> pathTracer;
 		std::unique_ptr<PpmImageWriter> imageWriter;
+
+		std::unique_ptr<SceneManager> sceneManager;
 	};
 }
