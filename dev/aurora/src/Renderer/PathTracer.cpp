@@ -60,7 +60,21 @@ namespace aurora
 		int rayDepth{ 0 };
 		numa::Vec3 pixelColor{ 0.0f };
 
-		pixelColor = ComputeColor(ray, scene, rayDepth);
+		if (sampleCount > 1)
+		{
+			for (int sample = 0; sample < sampleCount; sample++)
+			{
+				numa::Ray ray = sceneCamera->GenerateCameraRayJittered(raster_coord_x, raster_coord_y);
+				pixelColor += ComputeColor(ray, scene, rayDepth);
+			}
+			float scaleFactor = 1.0f / sampleCount;
+			pixelColor *= scaleFactor;
+		}
+		else
+		{
+			numa::Ray ray = sceneCamera->GenerateCameraRay(raster_coord_x, raster_coord_y);
+			pixelColor = ComputeColor(ray, scene, rayDepth);
+		}
 
 		pixelBuffer->WritePixel(raster_coord_x, raster_coord_y, pixelColor);
 	}
@@ -77,7 +91,7 @@ namespace aurora
 
 		numa::Vec3 pixelColor{ 0.0f, 0.0f, 0.0f };
 
-		if (rayDepth >= rayDepthLimit)
+		if (rayDepth > rayDepthLimit)
 			return numa::Vec3{ 0.0f, 0.0f, 0.0f };
 
 		ActorRayHit rayHit{};
@@ -123,15 +137,21 @@ namespace aurora
 	}
 	numa::Vec3 PathTracer::ShadeLambertian(const ActorRayHit& rayHit, const Scene& scene, const Lambertian* lambertian, int rayDepth)
 	{
-		numa::Vec3 pointAlbedo{};
+		numa::Vec3 pointAlbedo = lambertian->GetMaterialAlbedo();
 
-		numa::Vec3 materialAlbedo = lambertian->GetMaterialAlbedo();
-		numa::Vec3 normalColor = rayHit.hitNormal * 0.5f + numa::Vec3{ 0.5f };
+		float bias{ 0.00001f };
+		numa::Vec3 pointToShade = rayHit.hitPoint + bias * rayHit.hitNormal;
 
-		// pointAlbedo = materialAlbedo;
-		pointAlbedo = normalColor;
+		// Indirect lighting
 
-		return pointAlbedo;
+		numa::Vec3 scatteredDir = numa::RandomOnUnitSphere();
+		if (numa::Dot(scatteredDir, rayHit.hitNormal) < 0.0f)
+		{
+			scatteredDir = -scatteredDir;
+		}
+
+		numa::Ray scatteredRay{ pointToShade, scatteredDir };
+		return pointAlbedo * ComputeColor(scatteredRay, scene, ++rayDepth);
 	}
 
 	const f32PixelBuffer* PathTracer::GetPixelBuffer() const
