@@ -15,7 +15,7 @@ namespace aurora
 		Transform();
 		Transform(const numa::Vec3& rotation, const numa::Vec3& position);
 
-		// (pitch, yaw, roll) values are expected (in radians)
+		// (pitch, yaw, roll) values are expected (in degrees)
 		void SetRotation(const numa::Vec3& rotation);
 		// (x, y, z) coordinates in the world space are expected
 		void SetWorldPosition(const numa::Vec3& position);
@@ -28,7 +28,11 @@ namespace aurora
 
 	private:
 
+		void UpdateWorldMatrix();
+
+		numa::Mat4 world{};
+
 		numa::Vec3 rotation{ 0.0f, 0.0f, 0.0 };
-		numa::Vec3 translation{ 0.0f, 0.0f, 0.0f };
+		numa::Vec3 position{ 0.0f, 0.0f, 0.0f };
 	};
 }

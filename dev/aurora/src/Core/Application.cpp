@@ -69,7 +69,19 @@ namespace aurora
 	{
 		std::shared_ptr<Scene> demoScene = std::make_shared<Scene>("demo_scene");
 
+		// numa::Vec3 cameraPosition{ 2.0f, 2.0f, 2.0f };
+		// numa::Vec3 cameraRotation{ 0.0f, 30.0f, 0.0f }; // eulerAngles
+
+		numa::Vec3 cameraPosition{ 2.0f, 2.0f, 2.0f };
+		numa::Vec3 cameraRotation{ -20.0f, 30.0f, 0.0f }; // eulerAngles
+		
+		std::shared_ptr<Transform> cameraTransform = std::make_shared<Transform>(cameraRotation, cameraPosition);
+
+		// std::shared_ptr<Camera> camera = std::make_shared<Camera>(1280, 720, 90.0f);
+		// std::shared_ptr<Camera> camera = std::make_shared<Camera>(800, 600, 90.0f);
 		std::shared_ptr<Camera> camera = std::make_shared<Camera>(1920, 1080, 90.0f);
+		camera->SetTransform(cameraTransform);
+
 		demoScene->AddCamera(camera);
 
 		// 1. Sphere

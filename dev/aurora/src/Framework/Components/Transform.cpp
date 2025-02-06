@@ -1,26 +1,30 @@
 #include "Framework/Components/Transform.h"
 
+#include "Numa.h"
+
 namespace aurora
 {
 	Transform::Transform()
 		: Component(ComponentType::Transform)
 	{
+		UpdateWorldMatrix();
 	}
 	Transform::Transform(const numa::Vec3& rotation, const numa::Vec3& position)
 		: Component(ComponentType::Transform),
-		rotation(rotation), translation(position)
+		rotation(rotation), position(position)
 	{
-		// TODO
+		UpdateWorldMatrix();
 	}
 
 	void Transform::SetRotation(const numa::Vec3& rotation)
 	{
-		// TODO
 		this->rotation = rotation;
+		UpdateWorldMatrix();
 	}
 	void Transform::SetWorldPosition(const numa::Vec3& position)
 	{
-		this->translation = position;
+		this->position = position;
+		UpdateWorldMatrix();
 	}
 
 	const numa::Vec3& Transform::GetEulerAnglesRotation() const
@@ -29,30 +33,29 @@ namespace aurora
 	}
 	const numa::Vec3& Transform::GetWorldPosition() const
 	{
-		return translation;
+		return position;
 	}
 
 	numa::Mat3 Transform::GetRotationMatrix() const
 	{
-		return numa::Mat3{};
+		return numa::Mat3{ this->world };
 	}
 
 	numa::Mat4 Transform::GetWorldMatrix() const
 	{
-		/*
-		glm::mat4 pitch = glm::rotate(glm::mat4(1.0), rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
-		glm::mat4 yaw = glm::rotate(glm::mat4(1.0), rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-		glm::mat4 roll = glm::rotate(glm::mat4(1.0), rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+		return this->world;
+	}
 
-		glm::mat4 R = yaw * pitch * roll;
-
-		glm::mat4 T = glm::translate(glm::mat4(1.0f), translation);
-
-		glm::mat4 worldMatrix = T * R;
-
-		return worldMatrix;
-		*/
-
-		return numa::Mat4{};
+	void Transform::UpdateWorldMatrix()
+	{
+		this->world = numa::Mat4{
+			numa::RotateEulerAngles(
+				numa::Vec3{
+					numa::Rad(rotation.x),
+					numa::Rad(rotation.y),
+					numa::Rad(rotation.z)
+				}),
+			position
+		};
 	}
 }

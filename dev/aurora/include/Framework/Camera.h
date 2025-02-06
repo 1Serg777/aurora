@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Actor.h"
 #include "Ray.h"
 
 #include <cstdint>
@@ -13,7 +14,7 @@ namespace aurora
 		float fov_y{ 80.0f };
 	};
 
-	class Camera
+	class Camera : public Actor
 	{
 	public:
 
@@ -32,8 +33,10 @@ namespace aurora
 
 		void ComputeCameraParameters();
 
-		numa::Vec3 GeneratePixelPosition(uint32_t x_coord, uint32_t y_coord) const;
-		numa::Vec3 GeneratePixelPositionJittered(uint32_t x_coord, uint32_t y_coord) const;
+		numa::Vec3 GeneratePixelPosition(float x_raster_coord, float y_raster_coord) const;
+
+		// numa::Vec3 GeneratePixelPosition(uint32_t x_coord, uint32_t y_coord) const;
+		// numa::Vec3 GeneratePixelPositionJittered(uint32_t x_coord, uint32_t y_coord) const;
 
 		uint32_t resolution_x{ 1 };
 		uint32_t resolution_y{ 1 };
