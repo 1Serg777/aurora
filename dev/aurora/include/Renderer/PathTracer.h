@@ -20,15 +20,16 @@ namespace aurora
 	{
 	public:
 
+		void InitializePixelBuffer(uint32_t width, uint32_t height);
 		void ClearPixelBuffer(const numa::Vec3& clearColor);
 
 		void RenderScene(std::shared_ptr<Scene> scene);
 
+		void RenderPixel(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene);
+
 		const f32PixelBuffer* GetPixelBuffer() const;
 
 	private:
-
-		void RenderPixel(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene);
 
 		numa::Vec3 ComputeColor(const numa::Ray& ray, const Scene& scene, int rayDepth);
 

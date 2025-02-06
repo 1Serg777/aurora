@@ -22,6 +22,11 @@
 
 namespace aurora
 {
+	void PathTracer::InitializePixelBuffer(uint32_t width, uint32_t height)
+	{
+		pixelBuffer.reset();
+		pixelBuffer = std::make_shared<f32PixelBuffer>(width, height);
+	}
 	void PathTracer::ClearPixelBuffer(const numa::Vec3& clearColor)
 	{
 		pixelBuffer->Fill(clearColor);
@@ -34,8 +39,7 @@ namespace aurora
 		uint32_t resolution_x = camera->GetCameraResolution_X();
 		uint32_t resolution_y = camera->GetCameraResolution_Y();
 
-		pixelBuffer.reset();
-		pixelBuffer = std::make_shared<f32PixelBuffer>(resolution_x, resolution_y);
+		InitializePixelBuffer(resolution_x, resolution_y);
 
 		size_t pixelsToRender = static_cast<size_t>(resolution_x) * resolution_y;
 
@@ -55,7 +59,6 @@ namespace aurora
 	void PathTracer::RenderPixel(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene)
 	{
 		Camera* sceneCamera = scene.GetCamera();
-		numa::Ray ray = sceneCamera->GenerateCameraRay(raster_coord_x, raster_coord_y);
 
 		int rayDepth{ 0 };
 		numa::Vec3 pixelColor{ 0.0f };
