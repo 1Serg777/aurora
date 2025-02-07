@@ -43,9 +43,11 @@ namespace aurora
 	void Application::Run()
 	{
 		CreateDemoScene();
-		
+
+		// 1. Multiple threads
 		RenderActiveScene(sceneManager->GetActiveScene());
 
+		// 2. Single thread
 		// RenderScene(sceneManager->GetActiveScene());
 	}
 
@@ -75,6 +77,12 @@ namespace aurora
 		uint32_t physicalCores = std::thread::hardware_concurrency();
 
 		uint32_t threadCount = std::clamp(requestedThreadCount, uint32_t(1), physicalCores);
+
+		// [TEST]
+		// threadCount = 16;
+		// threadCount = 8;
+		// threadCount = 4;
+		// threadCount = 1;
 
 		taskManager = std::make_unique<TaskManager>();
 		taskManager->InitializeRenderingWorkers(threadCount);
@@ -147,71 +155,35 @@ namespace aurora
 
 	void Application::RenderActiveScene(std::shared_ptr<Scene> scene)
 	{
-		CreateRenderingTasks(scene);
+		// 1. Render the scene
+
+		CreateSceneRenderingJob(scene);
 
 		Camera* camera = scene->GetCamera();
 		uint32_t imageWidth = camera->GetCameraResolution_X();
 		uint32_t imageHeight = camera->GetCameraResolution_Y();
 		pathTracer->InitializePixelBuffer(imageWidth, imageHeight);
 
-		taskManager->RunRenderingWorkers(pathTracer.get(), scene.get());
+		taskManager->ExecuteRenderingJobs();
+
+		// 2. Save the image in a file
+
+		std::string fileName{ scene->GetSceneName() };
+		fileName.append(".ppm");
+
+		std::filesystem::path filePath = exePath / fileName;
+
+		imageWriter->ChangeFileName(filePath.generic_string().c_str());
+		imageWriter->WritePixels(*pathTracer->GetPixelBuffer());
 	}
 
-	void Application::CreateRenderingTasks(std::shared_ptr<Scene> scene)
+	void Application::CreateSceneRenderingJob(std::shared_ptr<Scene> scene)
 	{
-		Camera* camera = scene->GetCamera();
+		std::shared_ptr<SceneRenderingJob> sceneRenderingJob =
+			std::make_unique<SceneRenderingJob>(
+				pathTracer.get(), scene.get());
 
-		uint32_t imageWidth = camera->GetCameraResolution_X();
-		uint32_t imageHeight = camera->GetCameraResolution_Y();
-
-		// 1. Line Rendering Tasks
-		
-		uint32_t lineCount{ 10 }; // 108 tasks
-		CreateLineRenderingTasks(imageWidth, imageHeight, lineCount);
-
-		// 2. Square Rendering Tasks
-
-		// TODO
-	}
-
-	void Application::CreateLineRenderingTasks(uint32_t width, uint32_t height, uint32_t lineCount)
-	{
-		uint32_t taskCount = static_cast<uint32_t>(std::floorf(static_cast<float>(height) / lineCount));
-
-		// std::vector<RenderingTask> lineRenderingTasks(taskCount + 1);
-		std::vector<RenderingTask> lineRenderingTasks{ taskCount + 1 };
-
-		uint32_t taskIdx{ 0 };
-		for (taskIdx = 0; taskIdx < taskCount; taskIdx++)
-		{
-			RenderingTask lineRenderingTask{};
-			lineRenderingTask.raster_x_start = 0;
-			lineRenderingTask.raster_x_end = width;
-			lineRenderingTask.raster_y_start = taskIdx * lineCount;
-			lineRenderingTask.raster_y_end = lineRenderingTask.raster_y_start + lineCount;
-
-			lineRenderingTasks[taskIdx] = lineRenderingTask;
-		}
-
-		// Everything left (if any)
-
-		RenderingTask lineRenderingTask{};
-		lineRenderingTask.raster_x_start = 0;
-		lineRenderingTask.raster_x_end = width;
-		lineRenderingTask.raster_y_start = taskIdx * lineCount;
-		lineRenderingTask.raster_y_end =
-			std::clamp(
-				lineRenderingTask.raster_y_start + lineCount,
-				lineRenderingTask.raster_y_start,
-				height);
-
-		lineRenderingTasks[taskIdx] = lineRenderingTask;
-
-		taskManager->AddRenderingTasks(lineRenderingTasks);
-	}
-	void Application::CreateSquareRenderingTasks(uint32_t width, uint32_t height, uint32_t squareSideSize)
-	{
-		// TODO
+		taskManager->AddRenderingJob(sceneRenderingJob);
 	}
 
 	void Application::RenderScene(std::shared_ptr<Scene> scene)

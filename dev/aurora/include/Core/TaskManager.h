@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <stack>
 #include <thread>
@@ -16,19 +17,79 @@ namespace aurora
 
 	struct RenderingTask : Task
 	{
+		// TODO
+	};
+
+	struct SceneRenderingTask : RenderingTask
+	{
 		uint32_t raster_x_start{ 0 };
 		uint32_t raster_x_end{ 0 };
 		uint32_t raster_y_start{ 0 };
 		uint32_t raster_y_end{ 0 };
 	};
 
-	class RenderingTaskStorage
+	class RenderingJob
 	{
 	public:
-		virtual void AddRenderingTask(const RenderingTask&) = 0;
-		virtual void AddRenderingTasks(const std::vector<RenderingTask>& renderingTasks) = 0;
-		virtual bool AcquireRenderingTask(RenderingTask& renderingTask) = 0;
-		virtual void ClearRenderingTasks() = 0;
+
+		virtual void OnStart();
+		virtual void OnEnd();
+
+		virtual bool Started();
+		virtual bool Finished();
+
+		virtual void Reset();
+
+	protected:
+
+		RenderingJob() = default;
+		virtual ~RenderingJob() = default;
+
+	private:
+
+		bool executed{ false };
+		bool finished{ false };
+	};
+
+	class PathTracer;
+	class Scene;
+
+	class SceneRenderingJob : public RenderingJob
+	{
+	public:
+
+		SceneRenderingJob(PathTracer* pathTracer, Scene* scene);
+		virtual ~SceneRenderingJob() = default;
+
+		bool AcquireRenderingTask(SceneRenderingTask& renderingTask);
+
+		void NotifyRenderingTaskFinished(const SceneRenderingTask& renderingTask);
+
+		PathTracer* pathTracer{ nullptr };
+		Scene* scene{ nullptr };
+
+	private:
+
+		void InitializeRenderingTasks();
+
+		void CreateLineRenderingTasks(uint32_t width, uint32_t height, uint32_t lineCount);
+		void CreateLineRenderingTask(uint32_t taskIdx, uint32_t lineCount);
+
+		void CreateSquareRenderingTasks(uint32_t width, uint32_t height, uint32_t squareSideSize);
+
+		std::mutex renderingTaskMutex{};
+		std::mutex notificationMutex{};
+
+		std::stack<SceneRenderingTask> renderingTasks;
+
+		uint32_t tasksToDo{};
+		uint32_t tasksDone{};
+
+		double donePercentage{};
+
+		uint32_t lineCount{};
+		uint32_t imageWidth{};
+		uint32_t imageHeight{};
 	};
 
 	class Worker
@@ -36,55 +97,49 @@ namespace aurora
 		// TODO
 	};
 
-	class PathTracer;
-	class Scene;
-
 	class RenderingWorker : public Worker
 	{
 	public:
 
-		void Start(RenderingTaskStorage* renderingTaskStorage);
+		void Start();
+		void Stop();
+
+		// Call from the main thread!
 		void Wait();
 
-		void SetRenderer(PathTracer* pathTracer);
-		void SetScene(Scene* scene);
+		void SetRenderingJob(SceneRenderingJob* renderingJob);
+
+		bool Running() const;
+		bool Executing() const;
 
 	private:
 
 		void StartImpl();
 
-		RenderingTask currentRenderingTask{};
+		std::mutex renderingJobMutex{};
 
 		std::thread execThread;
 
-		RenderingTaskStorage* renderingTaskStorage{ nullptr };
+		SceneRenderingJob* renderingJob{ nullptr };
 
-		PathTracer* pathTracer{ nullptr };
-		Scene* scene{ nullptr };
+		bool running{ false };
+		bool executing{ false };
 	};
 
-	
-
-	class TaskManager : public RenderingTaskStorage
+	class TaskManager
 	{
 	public:
 
 		void InitializeRenderingWorkers(uint32_t threadCount);
 
-		void RunRenderingWorkers(PathTracer* renderer, Scene* scene);
-		void StopRenderingWorkers();
+		void AddRenderingJob(std::shared_ptr<SceneRenderingJob> renderingJob);
 
-		void AddRenderingTask(const RenderingTask& renderingTask) override;
-		void AddRenderingTasks(const std::vector<RenderingTask>& renderingTasks) override;
-		void ClearRenderingTasks() override;
+		void ExecuteRenderingJob();
+		void ExecuteRenderingJobs();
 
 	private:
 
-		bool AcquireRenderingTask(RenderingTask& renderingTask) override;
-
 		std::vector<std::unique_ptr<RenderingWorker>> renderingWorkers;
-		std::stack<RenderingTask> renderingTasks;
-
-		std::mutex renderingTaskMutex{};
+		std::stack<std::shared_ptr<SceneRenderingJob>> sceneRenderingJobs;
 	};
 }

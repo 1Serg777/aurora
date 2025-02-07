@@ -40,13 +40,7 @@ namespace aurora
 		void CreateDemoScene();
 
 		void RenderActiveScene(std::shared_ptr<Scene> scene);
-
-		void CreateRenderingTasks(std::shared_ptr<Scene> scene);
-
-		void CreateLineRenderingTasks(uint32_t width, uint32_t height, uint32_t lineCount);
-		// void CreateLineRenderingTask(uint32_t taskIdx, uint32_t lineCount);
-
-		void CreateSquareRenderingTasks(uint32_t width, uint32_t height, uint32_t squareSideSize);
+		void CreateSceneRenderingJob(std::shared_ptr<Scene> scene);
 
 		void RenderScene(std::shared_ptr<Scene> scene);
 
