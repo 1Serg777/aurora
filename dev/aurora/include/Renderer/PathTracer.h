@@ -5,6 +5,7 @@
 #include "Framework/Actor.h"
 
 #include "Framework/Materials/Lambertian.h"
+#include "Framework/Materials/Metal.h"
 
 #include "Scene/Scene.h"
 
@@ -27,6 +28,8 @@ namespace aurora
 
 		void RenderPixel(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene);
 
+		void ToneMap();
+
 		const f32PixelBuffer* GetPixelBuffer() const;
 
 	private:
@@ -35,8 +38,8 @@ namespace aurora
 
 		numa::Vec3 ShadeMaterial(const ActorRayHit& rayHit, const Scene& scene, int rayDepth);
 		numa::Vec3 ShadeLambertian(const ActorRayHit& rayHit, const Scene& scene, const Lambertian* lambertian, int rayDepth);
+		numa::Vec3 ShadeMetal(const ActorRayHit& rayHit, const Scene& scene, const Metal* metal, int rayDepth);
 		// numa::Vec3 ShadeDielectric(const RayHit& rayHit, const Scene& scene, const Dielectric* dielectric, int rayDepth);
-		// numa::Vec3 ShadeMetal(const RayHit& rayHit, const Scene& scene, const Metal* metal, int rayDepth);
 
 		std::shared_ptr<f32PixelBuffer> pixelBuffer;
 

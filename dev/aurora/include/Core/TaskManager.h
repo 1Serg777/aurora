@@ -61,6 +61,8 @@ namespace aurora
 		SceneRenderingJob(PathTracer* pathTracer, Scene* scene);
 		virtual ~SceneRenderingJob() = default;
 
+		void OnStart() override;
+
 		bool AcquireRenderingTask(SceneRenderingTask& renderingTask);
 
 		void NotifyRenderingTaskFinished(const SceneRenderingTask& renderingTask);

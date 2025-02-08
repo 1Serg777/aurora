@@ -44,6 +44,16 @@ namespace aurora
 		InitializeRenderingTasks();
 	}
 
+	void SceneRenderingJob::OnStart()
+	{
+		RenderingJob::OnStart();
+
+		Camera* camera = scene->GetCamera();
+		uint32_t imageWidth = camera->GetCameraResolution_X();
+		uint32_t imageHeight = camera->GetCameraResolution_Y();
+		pathTracer->InitializePixelBuffer(imageWidth, imageHeight);
+	}
+
 	bool SceneRenderingJob::AcquireRenderingTask(SceneRenderingTask& renderingTask)
 	{
 		std::lock_guard<std::mutex> lock{ renderingTaskMutex };

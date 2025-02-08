@@ -7,6 +7,7 @@
 #include "Framework/Components/Transform.h"
 
 #include "Framework/Materials/Lambertian.h"
+#include "Framework/Materials/Metal.h"
 
 #include "Framework/Geometry/Plane.h"
 #include "Framework/Geometry/Sphere.h"
@@ -90,65 +91,97 @@ namespace aurora
 	
 	void Application::CreateDemoScene()
 	{
+		// Geometries
+
+		std::shared_ptr<Sphere> lambertianSphereGeometry = std::make_shared<Sphere>(1.0f);
+		std::shared_ptr<Sphere> metalSphereGeometry = std::make_shared<Sphere>(1.0f);
+		std::shared_ptr<Sphere> fuzzyMetalSphereGeometry = std::make_shared<Sphere>(1.0f);
+
+		std::shared_ptr<Plane> lambertianPlaneGeometry = std::make_shared<Plane>();
+
+		// Transforms
+
+		std::shared_ptr<Transform> cameraTransform = std::make_shared<Transform>();
+		cameraTransform->SetWorldPosition(numa::Vec3{ 2.0f, 2.0f, 2.0f });
+		cameraTransform->SetRotation(numa::Vec3{ -20.0f, 30.0f, 0.0f });
+
+		std::shared_ptr<Transform> lambertianSphereTransform = std::make_shared<Transform>();
+		lambertianSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, -3.0f });
+		lambertianSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
+
+		std::shared_ptr<Transform> metalSphereTransform = std::make_shared<Transform>();
+		metalSphereTransform->SetWorldPosition(numa::Vec3{ -2.0f, 0.0f, -3.0f });
+		metalSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
+
+		std::shared_ptr<Transform> fuzzyMetalSphereTransform = std::make_shared<Transform>();
+		fuzzyMetalSphereTransform->SetWorldPosition(numa::Vec3{ 2.0f, 0.0f, -3.0f });
+		fuzzyMetalSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
+
+		std::shared_ptr<Transform> lambertianPlaneTransform = std::make_shared<Transform>();
+		lambertianPlaneTransform->SetWorldPosition(numa::Vec3{ 0.0f, -1.0f, 0.0f });
+		lambertianPlaneTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
+
+		// Materials
+
+		numa::Vec3 lamberttianSphereAlbedo{ 0.28f, 0.48f, 0.65f };
+		std::shared_ptr<Lambertian> lambertianSphereMaterial = std::make_shared<Lambertian>(lamberttianSphereAlbedo);
+
+		numa::Vec3 metalSphereAlbedo{ 0.5f, 0.5f, 0.5f };
+		std::shared_ptr<Metal> metalSphereMaterial = std::make_shared<Metal>(metalSphereAlbedo);
+
+		numa::Vec3 fuzzyMetalSphereAlbedo{ 0.5f, 0.5f, 0.5f };
+		std::shared_ptr<Metal> fuzzyMetalSphereMaterial = std::make_shared<Metal>(fuzzyMetalSphereAlbedo, 0.5f);
+
+		numa::Vec3 lambertianPlaneAlbedo{ 0.48f, 0.65f, 0.28f };
+		std::shared_ptr<Lambertian> lambertianPlaneMaterial = std::make_shared<Lambertian>(lambertianPlaneAlbedo);
+
+		// Scene definition
+
 		std::shared_ptr<Scene> demoScene = std::make_shared<Scene>("demo_scene");
 
-		// numa::Vec3 cameraPosition{ 2.0f, 2.0f, 2.0f };
-		// numa::Vec3 cameraRotation{ 0.0f, 30.0f, 0.0f }; // eulerAngles
+		// Camera
 
-		numa::Vec3 cameraPosition{ 2.0f, 2.0f, 2.0f };
-		numa::Vec3 cameraRotation{ -20.0f, 30.0f, 0.0f }; // eulerAngles
-		
-		std::shared_ptr<Transform> cameraTransform = std::make_shared<Transform>(cameraRotation, cameraPosition);
-
-		// std::shared_ptr<Camera> camera = std::make_shared<Camera>(1280, 720, 90.0f);
-		// std::shared_ptr<Camera> camera = std::make_shared<Camera>(800, 600, 90.0f);
 		std::shared_ptr<Camera> camera = std::make_shared<Camera>(1920, 1080, 90.0f);
 		camera->SetTransform(cameraTransform);
 
-		demoScene->AddCamera(camera);
+		// Actors
 
-		// 1. Sphere
+		// Lambertian Sphere
 
-		std::shared_ptr<Actor> redSphereActor = std::make_shared<Actor>("red_sphere");
+		std::shared_ptr<Actor> lambertianSphereActor = std::make_shared<Actor>("lambertian_sphere");
+		lambertianSphereActor->SetTransform(lambertianSphereTransform);
+		lambertianSphereActor->SetGeometry(lambertianSphereGeometry);
+		lambertianSphereActor->SetMaterial(lambertianSphereMaterial);
 
-		std::shared_ptr<Transform> redSphereTransform = std::make_shared<Transform>();
-		redSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, -3.0f });
-		redSphereTransform->SetRotation(numa::Vec3{ numa::Rad(0.0f), numa::Rad(0.0f), numa::Rad(0.0f) });
+		// Metal sphere (left)
 
-		float sphereRadius{ 1.0f };
-		std::shared_ptr<Sphere> sphereGeometry = std::make_shared<Sphere>(sphereRadius);
+		std::shared_ptr<Actor> metalSphereActor = std::make_shared<Actor>("metal_sphere");
+		metalSphereActor->SetTransform(metalSphereTransform);
+		metalSphereActor->SetGeometry(metalSphereGeometry);
+		metalSphereActor->SetMaterial(metalSphereMaterial);
 
-		// numa::Vec3 sphereMatAlbedo{ 1.0f, 0.0f, 0.0f };
-		numa::Vec3 sphereMatAlbedo{ 0.8f, 0.8f, 0.8f };
-		std::shared_ptr<Lambertian> sphereMaterial = std::make_shared<Lambertian>(sphereMatAlbedo);
+		// Metal sphere (right)
 
-		redSphereActor->SetTransform(redSphereTransform);
-		redSphereActor->SetGeometry(sphereGeometry);
-		redSphereActor->SetMaterial(sphereMaterial);
+		std::shared_ptr<Actor> fuzzyMetalSphereActor = std::make_shared<Actor>("fuzzy_metal_sphere");
+		fuzzyMetalSphereActor->SetTransform(fuzzyMetalSphereTransform);
+		fuzzyMetalSphereActor->SetGeometry(fuzzyMetalSphereGeometry);
+		fuzzyMetalSphereActor->SetMaterial(fuzzyMetalSphereMaterial);
 
-		// 2. Plane
+		// Plane
 
-		std::shared_ptr<Actor> greenPlaneActor = std::make_shared<Actor>("green_plane");
-
-		std::shared_ptr<Transform> greenPlaneTransform = std::make_shared<Transform>();
-		// greenPlaneTransform->SetWorldPosition(numa::Vec3{ 0.0f, -0.5f, 0.0f });
-		greenPlaneTransform->SetWorldPosition(numa::Vec3{ 0.0f, -1.0f, 0.0f });
-		greenPlaneTransform->SetRotation(numa::Vec3{ numa::Rad(0.0f), numa::Rad(0.0f), numa::Rad(0.0f) });
-
-		std::shared_ptr<Plane> planeGeometry = std::make_shared<Plane>();
-
-		// numa::Vec3 planeMatAlbedo{ 0.0f, 1.0f, 0.0f };
-		numa::Vec3 planeMatAlbedo{ 0.8f, 0.8f, 0.8f };
-		std::shared_ptr<Lambertian> planeMaterial = std::make_shared<Lambertian>(planeMatAlbedo);
-
-		greenPlaneActor->SetTransform(greenPlaneTransform);
-		greenPlaneActor->SetGeometry(planeGeometry);
-		greenPlaneActor->SetMaterial(planeMaterial);
+		std::shared_ptr<Actor> lambertianPlaneActor = std::make_shared<Actor>("lambertian_plane");
+		lambertianPlaneActor->SetTransform(lambertianPlaneTransform);
+		lambertianPlaneActor->SetGeometry(lambertianPlaneGeometry);
+		lambertianPlaneActor->SetMaterial(lambertianPlaneMaterial);
 
 		// 3. Adding the actors
 
-		demoScene->AddActor(redSphereActor);
-		demoScene->AddActor(greenPlaneActor);
+		demoScene->AddCamera(camera);
+
+		demoScene->AddActor(lambertianSphereActor);
+		demoScene->AddActor(metalSphereActor);
+		demoScene->AddActor(fuzzyMetalSphereActor);
+		demoScene->AddActor(lambertianPlaneActor);
 
 		sceneManager->SetActiveScene(demoScene);
 	}
@@ -159,14 +192,13 @@ namespace aurora
 
 		CreateSceneRenderingJob(scene);
 
-		Camera* camera = scene->GetCamera();
-		uint32_t imageWidth = camera->GetCameraResolution_X();
-		uint32_t imageHeight = camera->GetCameraResolution_Y();
-		pathTracer->InitializePixelBuffer(imageWidth, imageHeight);
-
 		taskManager->ExecuteRenderingJobs();
 
-		// 2. Save the image in a file
+		// 2. Tone mapping
+
+		pathTracer->ToneMap();
+
+		// 3. Save the image in a file
 
 		std::string fileName{ scene->GetSceneName() };
 		fileName.append(".ppm");

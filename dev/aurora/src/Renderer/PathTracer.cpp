@@ -82,6 +82,28 @@ namespace aurora
 		pixelBuffer->WritePixel(raster_coord_x, raster_coord_y, pixelColor);
 	}
 
+	void PathTracer::ToneMap()
+	{
+		uint32_t resolution_x = pixelBuffer->GetWidth();
+		uint32_t resolution_y = pixelBuffer->GetHeight();
+
+		// Normalize pixel values
+
+		for (uint32_t y = 0; y < resolution_y; y++)
+		{
+			for (uint32_t x = 0; x < resolution_x; x++)
+			{
+				numa::Vec3 radiance = pixelBuffer->GetPixelValue(x, y);
+				
+				// radiance = numa::Pow(radiance, 0.5f);
+				// radiance = numa::Pow(radiance, 1.0f / 2.2f);
+				radiance = numa::Sqrt(radiance);
+
+				pixelBuffer->WritePixel(x, y, radiance);
+			}
+		}
+	}
+
 	numa::Vec3 PathTracer::ComputeColor(const numa::Ray& ray, const Scene& scene, int rayDepth)
 	{
 		Gradient skyGradient{
@@ -129,6 +151,12 @@ namespace aurora
 				pixelColor = ShadeLambertian(rayHit, scene, lambertianMat, rayDepth);
 			}
 			break;
+			case MaterialType::METAL:
+			{
+				Metal* metalMat = static_cast<Metal*>(rayHit.hitActor->GetMaterial());
+				pixelColor = ShadeMetal(rayHit, scene, metalMat, rayDepth);
+			}
+			break;
 			default:
 			{
 				assert(false && "Material type is not supported!");
@@ -143,18 +171,44 @@ namespace aurora
 		numa::Vec3 pointAlbedo = lambertian->GetMaterialAlbedo();
 
 		float bias{ 0.00001f };
-		numa::Vec3 pointToShade = rayHit.hitPoint + bias * rayHit.hitNormal;
+		numa::Vec3 hitPoint = rayHit.hitPoint + bias * rayHit.hitNormal;
 
 		// Indirect lighting
 
-		numa::Vec3 scatteredDir = numa::RandomOnUnitSphere();
-		if (numa::Dot(scatteredDir, rayHit.hitNormal) < 0.0f)
-		{
-			scatteredDir = -scatteredDir;
-		}
+		// 1. Lambertian
 
-		numa::Ray scatteredRay{ pointToShade, scatteredDir };
+		//numa::Vec3 scatteredDir = numa::RandomOnUnitSphere();
+		//if (numa::Dot(scatteredDir, rayHit.hitNormal) < 0.0f)
+		//{
+		//	scatteredDir = -scatteredDir;
+		//}
+
+		// 2. Lambertian (fixed)
+
+		// numa::Vec3 scatteredDir = numa::Normalize(rayHit.hitNormal + numa::RandomOnUnitSphere());
+
+		// 3. Lambertian (fixed 2)
+
+		numa::Vec3 scatteredDir = numa::Normalize(rayHit.hitNormal + numa::RandomInUnitCube());
+
+		if (numa::Length2(scatteredDir) < 1e-10)
+			scatteredDir = rayHit.hitNormal;
+
+		numa::Ray scatteredRay{ hitPoint, scatteredDir };
 		return pointAlbedo * ComputeColor(scatteredRay, scene, ++rayDepth);
+	}
+	numa::Vec3 PathTracer::ShadeMetal(const ActorRayHit& rayHit, const Scene& scene, const Metal* metal, int rayDepth)
+	{
+		numa::Vec3 attenuation = metal->GetAttenuation();
+
+		float bias{ 0.00001f };
+		numa::Vec3 hitPoint = rayHit.hitPoint + bias * rayHit.hitNormal;
+
+		numa::Vec3 reflectedDir = metal->Reflect(rayHit.hitRay.GetDirection(), rayHit.hitNormal);
+
+		numa::Ray reflectedRay{ hitPoint, reflectedDir };
+		numa::Vec3 color = attenuation * ComputeColor(reflectedRay, scene, ++rayDepth);
+		return color;
 	}
 
 	const f32PixelBuffer* PathTracer::GetPixelBuffer() const
