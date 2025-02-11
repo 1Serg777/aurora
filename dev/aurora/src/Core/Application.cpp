@@ -135,6 +135,10 @@ namespace aurora
 		numa::Vec3 lambertianPlaneAlbedo{ 0.48f, 0.65f, 0.28f };
 		std::shared_ptr<Lambertian> lambertianPlaneMaterial = std::make_shared<Lambertian>(lambertianPlaneAlbedo);
 
+		numa::Vec3 glassSphereAttenuation{ 1.0f, 1.0f, 1.0f };
+		float glassSphereIOR = 1.5f;
+		std::shared_ptr<Dielectric> dielectricMat = std::make_shared<Dielectric>(glassSphereAttenuation, glassSphereIOR);
+
 		// Scene definition
 
 		std::shared_ptr<Scene> demoScene = std::make_shared<Scene>("demo_scene");
@@ -158,7 +162,8 @@ namespace aurora
 		std::shared_ptr<Actor> metalSphereActor = std::make_shared<Actor>("metal_sphere");
 		metalSphereActor->SetTransform(metalSphereTransform);
 		metalSphereActor->SetGeometry(metalSphereGeometry);
-		metalSphereActor->SetMaterial(metalSphereMaterial);
+		// metalSphereActor->SetMaterial(metalSphereMaterial);
+		metalSphereActor->SetMaterial(dielectricMat);
 
 		// Metal sphere (right)
 

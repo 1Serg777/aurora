@@ -9,8 +9,6 @@
 #include "Framework/Geometry/Sphere.h"
 #include "Framework/Geometry/Plane.h"
 
-#include "Framework/Materials/Lambertian.h"
-
 #include "Framework/Gradient.h"
 
 #include "Numa.h"
@@ -157,6 +155,12 @@ namespace aurora
 				pixelColor = ShadeMetal(rayHit, scene, metalMat, rayDepth);
 			}
 			break;
+			case MaterialType::DIELECTRIC:
+			{
+				Dielectric* dielectricMat = static_cast<Dielectric*>(rayHit.hitActor->GetMaterial());
+				pixelColor = ShadeDielectric(rayHit, scene, dielectricMat, rayDepth);
+			}
+			break;
 			default:
 			{
 				assert(false && "Material type is not supported!");
@@ -208,6 +212,64 @@ namespace aurora
 
 		numa::Ray reflectedRay{ hitPoint, reflectedDir };
 		numa::Vec3 color = attenuation * ComputeColor(reflectedRay, scene, ++rayDepth);
+		return color;
+	}
+	numa::Vec3 PathTracer::ShadeDielectric(const ActorRayHit& rayHit, const Scene& scene, const Dielectric* dielectric, int rayDepth)
+	{
+		// Wait, what value for the ior parameter should I provide to the function?
+		FresnelData fresnelData = dielectric->Fresnel(rayHit.hitRay.GetDirection(), rayHit.hitNormal, 1.0f);
+		// Should we somehow remember this somewhere? 'RayHit' probably?
+
+		// numa::Vec3 pointToShade = rayHit.hitRay.GetPoint(rayHit.hitDistance);
+		numa::Vec3 pointToShade = rayHit.hitPoint;
+		numa::Vec3 pointToShadeR = numa::Vec3{ 0.0f };
+		numa::Vec3 pointToShadeT = numa::Vec3{ 0.0f };
+
+		// glm::vec3 pointToShadeR = rayHit.hitRay.GetPoint(rayHit.hitDistanceClose) + Ray::defaultBias * rayHit.hitNormal;
+		// glm::vec3 pointToShadeT = rayHit.hitRay.GetPoint(rayHit.hitDistanceClose) - Ray::defaultBias * rayHit.hitNormal;
+
+		// glm::vec3 pointToShadeR = rayHit.hitRay.GetPoint(rayHit.hitDistanceClose);
+		// glm::vec3 pointToShadeT = rayHit.hitRay.GetPoint(rayHit.hitDistanceClose);
+
+		numa::Vec3 attenuation = dielectric->GetAttenuation();
+		numa::Vec3 color{ 0.0f, 0.0f, 0.0f };
+
+		float bias{ 0.00001f };
+		float rayDir_dot_hitNorm = numa::Dot(rayHit.hitRay.GetDirection(), rayHit.hitNormal);
+		if (rayDir_dot_hitNorm < 0.0f) // We're entering the object!
+		{
+			// Ray reflectedRay{ pointToShadeR, fresnelData.reflected };
+			// color += fresnelData.reflectedLightRatio * ComputeColor(reflectedRay, ++rayDepth, scene) * attenuation;
+
+			// That's what the Fresnel() method does internally
+			// Here we just have to avoid "waisting" rayDepth for computing reflected color.
+			// 
+			// fresnelData.reflectedLightRatio = 0.0f;
+			// fresnelData.refractedLightRatio = 1.0f;
+
+			pointToShadeR = pointToShade + bias * rayHit.hitNormal;
+			pointToShadeT = pointToShade - bias * rayHit.hitNormal;
+
+			// Ray reflectedRay{ pointToShadeR, fresnelData.reflected };
+			// color += fresnelData.reflectedLightRatio * ComputeColor(reflectedRay, ++rayDepth, scene) * attenuation;
+		}
+		else // We're leaving the object!
+		{
+			pointToShadeR = pointToShade - bias * rayHit.hitNormal;
+			pointToShadeT = pointToShade + bias * rayHit.hitNormal;
+		}
+
+		// Ray reflectedRay{ pointToShade, fresnelData.reflected };
+		numa::Ray reflectedRay{ pointToShadeR, fresnelData.reflected };
+		color += fresnelData.reflectedLightRatio * ComputeColor(reflectedRay, scene, rayDepth + 1) * attenuation;
+
+		// Ray refractedRay{ pointToShade, fresnelData.refracted };
+		numa::Ray refractedRay{ pointToShadeT, fresnelData.refracted };
+		color += fresnelData.refractedLightRatio * ComputeColor(refractedRay, scene, rayDepth + 1) * attenuation;
+
+		// Less accurate (inaccurate) because we waste all the depth available for reflected rays.
+		// color += fresnelData.refractedLightRatio * ComputeColor(refractedRay, ++rayDepth, scene) * attenuation;
+
 		return color;
 	}
 
