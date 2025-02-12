@@ -4,6 +4,8 @@
 
 #include "Vec3.hpp"
 
+#include <utility>
+
 namespace aurora
 {
 	struct FresnelData
@@ -35,8 +37,11 @@ namespace aurora
 
 	private:
 
-		FresnelData Fresnel1(const numa::Vec3& incident, const numa::Vec3& normal, float ior) const;
-		FresnelData Fresnel2(const numa::Vec3& incident, const numa::Vec3& normal, float ior) const;
+		FresnelData RefractImpl1(const numa::Vec3& incident, const numa::Vec3& normal, float ior) const;
+		FresnelData RefractImpl2(const numa::Vec3& incident, const numa::Vec3& normal, float ior) const;
+
+		std::pair<float, float> Fresnel(float c1, float c2, float n1, float n2) const;
+		std::pair<float, float> FresnelSchlick(float c1, float n1, float n2) const;
 
 		numa::Vec3 attenuation{ 1.0f, 1.0f, 1.0f };
 		float ior{ 1.0f };
