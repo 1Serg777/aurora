@@ -161,6 +161,12 @@ namespace aurora
 				pixelColor = ShadeDielectric(rayHit, scene, dielectricMat, rayDepth);
 			}
 			break;
+			case MaterialType::PARTICIPATING_MEDIUM:
+			{
+				ParticipatingMedium* medium = static_cast<ParticipatingMedium*>(rayHit.hitActor->GetMaterial());
+				pixelColor = ShadeParticipatingMedium(rayHit, scene, medium, rayDepth);
+			}
+			break;
 			default:
 			{
 				assert(false && "Material type is not supported!");
@@ -271,6 +277,48 @@ namespace aurora
 		// color += fresnelData.refractedLightRatio * ComputeColor(refractedRay, ++rayDepth, scene) * attenuation;
 
 		return color;
+	}
+	numa::Vec3 PathTracer::ShadeParticipatingMedium(const ActorRayHit& rayHit, const Scene& scene, const ParticipatingMedium* medium, int rayDepth)
+	{
+		float bias{ 0.00001f };
+
+		// 1. Handle entry into the volume
+
+		numa::Ray insideVolumeRay{
+			numa::Vec3{ rayHit.hitPoint - bias * rayHit.hitNormal },
+			numa::Vec3{ rayHit.hitRay.GetDirection() }
+		};
+
+		// 2. Assume that there's no nested objects inside the volume,
+		//    so we can directly figure out the exit point without
+		//    sending the ray through the scene.
+
+		ActorRayHit exitPointHit{};
+
+		Actor* volumeActor = rayHit.hitActor;
+		bool exitPointIntersect = volumeActor->Intersect(insideVolumeRay, exitPointHit);
+
+		if (!exitPointIntersect) // Intersection was tangent to the volume
+		{
+			// What should we return?
+
+			return numa::Vec3{ 0.0f };
+		}
+
+		assert(rayHit.hitActor == exitPointHit.hitActor && "The volume must not have any nested objects!");
+
+		float distance = exitPointHit.hitDistance;
+		float transmittance = medium->GetTransmittanceValue(distance);
+
+		// 3. Handle exit out of the volume
+
+		numa::Ray behindVolumeRay{
+			numa::Vec3{ exitPointHit.hitPoint + bias * exitPointHit.hitNormal },
+			numa::Vec3{ exitPointHit.hitRay.GetDirection() }
+		};
+		numa::Vec3 backgroundColor = ComputeColor(behindVolumeRay, scene, rayDepth);
+
+		return transmittance * backgroundColor + (1.0f - transmittance) * medium->mediumColor;	
 	}
 
 	const f32PixelBuffer* PathTracer::GetPixelBuffer() const

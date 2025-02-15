@@ -33,7 +33,8 @@ namespace aurora
 
 		GeometryType hitGeometryType{};
 
-		bool  hit{ false };
+		bool hit{ false };
+		bool hitFrontFace{ false };
 	};
 
 	class Geometry : public Component

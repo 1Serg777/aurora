@@ -6,8 +6,10 @@
 #include "Framework/Components/Material.h"
 #include "Framework/Components/Transform.h"
 
+#include "Framework/Materials/Dielectric.h"
 #include "Framework/Materials/Lambertian.h"
 #include "Framework/Materials/Metal.h"
+#include "Framework/Materials/ParticipatingMedium.h"
 
 #include "Framework/Geometry/Plane.h"
 #include "Framework/Geometry/Sphere.h"
@@ -97,12 +99,14 @@ namespace aurora
 		std::shared_ptr<Sphere> metalSphereGeometry = std::make_shared<Sphere>(1.0f);
 		std::shared_ptr<Sphere> fuzzyMetalSphereGeometry = std::make_shared<Sphere>(1.0f);
 
+		std::shared_ptr<Sphere> participatingMediumSphereGeometry = std::make_shared<Sphere>(1.0f);
+
 		std::shared_ptr<Plane> lambertianPlaneGeometry = std::make_shared<Plane>();
 
 		// Transforms
 
 		std::shared_ptr<Transform> cameraTransform = std::make_shared<Transform>();
-		cameraTransform->SetWorldPosition(numa::Vec3{ 2.0f, 2.0f, 2.0f });
+		cameraTransform->SetWorldPosition(numa::Vec3{ 1.5f, 1.5f, 2.5f });
 		cameraTransform->SetRotation(numa::Vec3{ -20.0f, 30.0f, 0.0f });
 
 		std::shared_ptr<Transform> lambertianSphereTransform = std::make_shared<Transform>();
@@ -117,6 +121,10 @@ namespace aurora
 		fuzzyMetalSphereTransform->SetWorldPosition(numa::Vec3{ 2.0f, 0.0f, -3.0f });
 		fuzzyMetalSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
+		std::shared_ptr<Transform> participatingMediumSphereTransform = std::make_shared<Transform>();
+		participatingMediumSphereTransform->SetWorldPosition(numa::Vec3{ -0.5f, 0.0f, -0.5f });
+		participatingMediumSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
+
 		std::shared_ptr<Transform> lambertianPlaneTransform = std::make_shared<Transform>();
 		lambertianPlaneTransform->SetWorldPosition(numa::Vec3{ 0.0f, -1.0f, 0.0f });
 		lambertianPlaneTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
@@ -126,18 +134,20 @@ namespace aurora
 		numa::Vec3 lamberttianSphereAlbedo{ 0.28f, 0.48f, 0.65f };
 		std::shared_ptr<Lambertian> lambertianSphereMaterial = std::make_shared<Lambertian>(lamberttianSphereAlbedo);
 
-		numa::Vec3 metalSphereAlbedo{ 0.5f, 0.5f, 0.5f };
-		std::shared_ptr<Metal> metalSphereMaterial = std::make_shared<Metal>(metalSphereAlbedo);
+		numa::Vec3 glassSphereAttenuation{ 1.0f, 1.0f, 1.0f };
+		float glassSphereIOR = 1.5f;
+		std::shared_ptr<Dielectric> dielectricMat = std::make_shared<Dielectric>(glassSphereAttenuation, glassSphereIOR);
 
 		numa::Vec3 fuzzyMetalSphereAlbedo{ 0.5f, 0.5f, 0.5f };
 		std::shared_ptr<Metal> fuzzyMetalSphereMaterial = std::make_shared<Metal>(fuzzyMetalSphereAlbedo, 0.5f);
 
+		float absorptionCoefficient{ 1.0f };
+		numa::Vec3 mediumColor{ 0.8f };
+		std::shared_ptr<ParticipatingMedium> participatingMediumSphereMaterial =
+			std::make_shared<ParticipatingMedium>(mediumColor, absorptionCoefficient);
+
 		numa::Vec3 lambertianPlaneAlbedo{ 0.48f, 0.65f, 0.28f };
 		std::shared_ptr<Lambertian> lambertianPlaneMaterial = std::make_shared<Lambertian>(lambertianPlaneAlbedo);
-
-		numa::Vec3 glassSphereAttenuation{ 1.0f, 1.0f, 1.0f };
-		float glassSphereIOR = 1.5f;
-		std::shared_ptr<Dielectric> dielectricMat = std::make_shared<Dielectric>(glassSphereAttenuation, glassSphereIOR);
 
 		// Scene definition
 
@@ -162,7 +172,6 @@ namespace aurora
 		std::shared_ptr<Actor> metalSphereActor = std::make_shared<Actor>("metal_sphere");
 		metalSphereActor->SetTransform(metalSphereTransform);
 		metalSphereActor->SetGeometry(metalSphereGeometry);
-		// metalSphereActor->SetMaterial(metalSphereMaterial);
 		metalSphereActor->SetMaterial(dielectricMat);
 
 		// Metal sphere (right)
@@ -171,6 +180,13 @@ namespace aurora
 		fuzzyMetalSphereActor->SetTransform(fuzzyMetalSphereTransform);
 		fuzzyMetalSphereActor->SetGeometry(fuzzyMetalSphereGeometry);
 		fuzzyMetalSphereActor->SetMaterial(fuzzyMetalSphereMaterial);
+
+		// Participating medium sphere volume (between the glass and lambertian spheres)
+
+		std::shared_ptr<Actor> participatingMediumSphereActor = std::make_shared<Actor>("participating_medium_sphere");
+		participatingMediumSphereActor->SetTransform(participatingMediumSphereTransform);
+		participatingMediumSphereActor->SetGeometry(participatingMediumSphereGeometry);
+		participatingMediumSphereActor->SetMaterial(participatingMediumSphereMaterial);
 
 		// Plane
 
@@ -186,6 +202,7 @@ namespace aurora
 		demoScene->AddActor(lambertianSphereActor);
 		demoScene->AddActor(metalSphereActor);
 		demoScene->AddActor(fuzzyMetalSphereActor);
+		demoScene->AddActor(participatingMediumSphereActor);
 		demoScene->AddActor(lambertianPlaneActor);
 
 		sceneManager->SetActiveScene(demoScene);

@@ -48,6 +48,8 @@ namespace aurora
 			geometryHit.hitNormal = rayHit.hitNormalT1;
 			geometryHit.hitUv = rayHit.hitUvT1;
 			geometryHit.hitDistance = rayHit.hitDistanceT1;
+
+			geometryHit.hitFrontFace = true;
 		}
 		else /* if (rayHit.DoubleHit()) */
 		{
@@ -60,6 +62,8 @@ namespace aurora
 				geometryHit.hitNormal = rayHit.hitNormalT2;
 				geometryHit.hitUv = rayHit.hitUvT2;
 				geometryHit.hitDistance = rayHit.hitDistanceT2;
+
+				geometryHit.hitFrontFace = true;
 			}
 			// Two hits 'inside'
 			else if (rayHit.HitInside())
@@ -68,6 +72,8 @@ namespace aurora
 				geometryHit.hitNormal = rayHit.hitNormalT1;
 				geometryHit.hitUv = rayHit.hitUvT1;
 				geometryHit.hitDistance = rayHit.hitDistanceT1;
+
+				geometryHit.hitFrontFace = false;
 			}
 		}
 

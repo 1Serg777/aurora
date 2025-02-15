@@ -34,6 +34,8 @@ namespace aurora
 			geometryHit.hitNormal = rayPlaneHit.hitNormal;
 			geometryHit.hitUv = rayPlaneHit.hitUv;
 			geometryHit.hitDistance = rayPlaneHit.hitDistance;
+
+			geometryHit.hitFrontFace = rayPlaneHit.hitFrontFace;
 			geometryHit.hitGeometryType = GeometryType::Plane;
 		}
 

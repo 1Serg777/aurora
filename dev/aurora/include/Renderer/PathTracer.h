@@ -7,6 +7,7 @@
 #include "Framework/Materials/Dielectric.h"
 #include "Framework/Materials/Lambertian.h"
 #include "Framework/Materials/Metal.h"
+#include "Framework/Materials/ParticipatingMedium.h"
 
 #include "Scene/Scene.h"
 
@@ -41,6 +42,7 @@ namespace aurora
 		numa::Vec3 ShadeLambertian(const ActorRayHit& rayHit, const Scene& scene, const Lambertian* lambertian, int rayDepth);
 		numa::Vec3 ShadeMetal(const ActorRayHit& rayHit, const Scene& scene, const Metal* metal, int rayDepth);
 		numa::Vec3 ShadeDielectric(const ActorRayHit& rayHit, const Scene& scene, const Dielectric* dielectric, int rayDepth);
+		numa::Vec3 ShadeParticipatingMedium(const ActorRayHit& rayHit, const Scene& scene, const ParticipatingMedium* medium, int rayDepth);
 
 		std::shared_ptr<f32PixelBuffer> pixelBuffer;
 
