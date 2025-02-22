@@ -9,6 +9,8 @@
 #include "Framework/Materials/Metal.h"
 #include "Framework/Materials/ParticipatingMedium.h"
 
+#include "Core/TaskManager.h"
+
 #include "Scene/Scene.h"
 
 #include "Ray.h"
@@ -19,6 +21,14 @@
 
 namespace aurora
 {
+	struct ImageRegion
+	{
+		uint32_t raster_x_start{ 0 };
+		uint32_t raster_x_end{ 0 };
+		uint32_t raster_y_start{ 0 };
+		uint32_t raster_y_end{ 0 };
+	};
+
 	class PathTracer
 	{
 	public:
@@ -27,7 +37,7 @@ namespace aurora
 		void ClearPixelBuffer(const numa::Vec3& clearColor);
 
 		void RenderScene(std::shared_ptr<Scene> scene);
-
+		void RenderPixels(const ImageRegion& renderRegion, const Scene& scene);
 		void RenderPixel(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene);
 
 		void ToneMap();
@@ -51,5 +61,60 @@ namespace aurora
 		int sampleCount{ 50 };
 
 		bool multisampling{ false };
+	};
+
+	struct RenderingTask : Task
+	{
+		// TODO
+	};
+
+	struct SceneRenderingTask : RenderingTask
+	{
+		uint32_t raster_x_start{ 0 };
+		uint32_t raster_x_end{ 0 };
+		uint32_t raster_y_start{ 0 };
+		uint32_t raster_y_end{ 0 };
+	};
+
+	class SceneRenderingJob : public Job
+	{
+	public:
+
+		SceneRenderingJob(PathTracer* pathTracer, Scene* scene);
+		virtual ~SceneRenderingJob() = default;
+
+		void OnStart() override;
+
+		bool DoWork() override;
+
+		bool AcquireRenderingTask(SceneRenderingTask& renderingTask);
+
+		void NotifyRenderingTaskFinished(const SceneRenderingTask& renderingTask);
+
+		PathTracer* pathTracer{ nullptr };
+		Scene* scene{ nullptr };
+
+	private:
+
+		void InitializeRenderingTasks();
+
+		void CreateLineRenderingTasks(uint32_t width, uint32_t height, uint32_t lineCount);
+		void CreateLineRenderingTask(uint32_t taskIdx, uint32_t lineCount);
+
+		void CreateSquareRenderingTasks(uint32_t width, uint32_t height, uint32_t squareSideSize);
+
+		std::mutex renderingTaskMutex{};
+		std::mutex notificationMutex{};
+
+		std::stack<SceneRenderingTask> renderingTasks;
+
+		uint32_t tasksToDo{};
+		uint32_t tasksDone{};
+
+		double donePercentage{};
+
+		uint32_t lineCount{};
+		uint32_t imageWidth{};
+		uint32_t imageHeight{};
 	};
 }

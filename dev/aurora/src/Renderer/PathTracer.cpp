@@ -15,8 +15,9 @@
 #include "Random.h"
 #include "Vec3.hpp"
 
-#include <iostream>
 #include <cassert>
+#include <iostream>
+#include <iomanip>
 
 namespace aurora
 {
@@ -54,6 +55,16 @@ namespace aurora
 		}
 	}
 
+	void PathTracer::RenderPixels(const ImageRegion& renderRegion, const Scene& scene)
+	{
+		for (uint32_t y = renderRegion.raster_y_start; y < renderRegion.raster_y_end; y++)
+		{
+			for (uint32_t x = renderRegion.raster_x_start; x < renderRegion.raster_x_end; x++)
+			{
+				RenderPixel(x, y, scene);
+			}
+		}
+	}
 	void PathTracer::RenderPixel(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene)
 	{
 		Camera* sceneCamera = scene.GetCamera();
@@ -325,4 +336,146 @@ namespace aurora
 	{
 		return pixelBuffer.get();
 	}
+
+	// SceneRenderingJob class
+
+	SceneRenderingJob::SceneRenderingJob(PathTracer* pathTracer, Scene* scene)
+		: pathTracer(pathTracer), scene(scene)
+	{
+		InitializeRenderingTasks();
+	}
+
+	void SceneRenderingJob::OnStart()
+	{
+		Job::OnStart();
+
+		Camera* camera = scene->GetCamera();
+		uint32_t imageWidth = camera->GetCameraResolution_X();
+		uint32_t imageHeight = camera->GetCameraResolution_Y();
+		pathTracer->InitializePixelBuffer(imageWidth, imageHeight);
+	}
+
+	bool SceneRenderingJob::DoWork()
+	{
+		// Acquire rendering task
+
+		SceneRenderingTask renderingTask{};
+		if (!AcquireRenderingTask(renderingTask))
+		{
+			return false;
+		}
+
+		// Do the work
+
+		ImageRegion renderRegion{};
+		renderRegion.raster_x_start = renderingTask.raster_x_start;
+		renderRegion.raster_x_end = renderingTask.raster_x_end;
+		renderRegion.raster_y_start = renderingTask.raster_y_start;
+		renderRegion.raster_y_end = renderingTask.raster_y_end;
+
+		pathTracer->RenderPixels(renderRegion, *scene);
+
+		NotifyRenderingTaskFinished(renderingTask);
+
+		return true;
+	}
+
+	bool SceneRenderingJob::AcquireRenderingTask(SceneRenderingTask& renderingTask)
+	{
+		std::lock_guard<std::mutex> lock{ renderingTaskMutex };
+
+		if (renderingTasks.empty())
+			return false;
+
+		renderingTask = renderingTasks.top();
+		renderingTasks.pop();
+
+		return true;
+	}
+
+	void SceneRenderingJob::NotifyRenderingTaskFinished(const SceneRenderingTask& renderingTask)
+	{
+		std::lock_guard<std::mutex> lockNotification{ notificationMutex };
+
+		size_t pixelsRendered_x = static_cast<size_t>(renderingTask.raster_x_end) - renderingTask.raster_x_start;
+		size_t pixelsRendered_y = static_cast<size_t>(renderingTask.raster_y_end) - renderingTask.raster_y_start;
+		size_t pixelsRendered = pixelsRendered_x * pixelsRendered_y;
+
+		size_t renderingJobPixels = static_cast<size_t>(this->imageWidth) * this->imageHeight;
+
+		float taskPercentage = static_cast<float>(pixelsRendered) / renderingJobPixels;
+
+		donePercentage += taskPercentage;
+
+		std::clog << "\rProgress: " << std::setprecision(3) << donePercentage * 100.0f << "% " << std::flush;
+
+		std::lock_guard<std::mutex> lockTask{ renderingTaskMutex };
+
+		// if (renderingTasks.empty())
+			// OnEnd();
+
+		tasksDone++;
+
+		if (tasksDone == tasksToDo)
+			OnEnd();
+	}
+
+	void SceneRenderingJob::InitializeRenderingTasks()
+	{
+		std::lock_guard<std::mutex> lock{ renderingTaskMutex };
+
+		Camera* camera = scene->GetCamera();
+
+		this->imageWidth = camera->GetCameraResolution_X();
+		this->imageHeight = camera->GetCameraResolution_Y();
+
+		// 1. Line Rendering Tasks
+
+		this->lineCount = 10; // 108 tasks for 1080 lines
+		CreateLineRenderingTasks(imageWidth, imageHeight, lineCount);
+
+		tasksToDo = static_cast<uint32_t>(renderingTasks.size());
+		tasksDone = 0;
+	}
+
+	void SceneRenderingJob::CreateLineRenderingTasks(uint32_t width, uint32_t height, uint32_t lineCount)
+	{
+		uint32_t taskCount = static_cast<uint32_t>(std::floorf(static_cast<float>(height) / lineCount));
+
+		uint32_t taskIdx{ 0 };
+		for (taskIdx = 0; taskIdx < taskCount; taskIdx++)
+		{
+			SceneRenderingTask renderingTask{};
+			renderingTask.raster_x_start = 0;
+			renderingTask.raster_x_end = width;
+			renderingTask.raster_y_start = taskIdx * lineCount;
+			renderingTask.raster_y_end = renderingTask.raster_y_start + lineCount;
+
+			renderingTasks.push(renderingTask);
+		}
+
+		// Everything left (if any)
+
+		SceneRenderingTask renderingTask{};
+		renderingTask.raster_x_start = 0;
+		renderingTask.raster_x_end = width;
+		renderingTask.raster_y_start = taskIdx * lineCount;
+		renderingTask.raster_y_end =
+			std::clamp(
+				renderingTask.raster_y_start + lineCount,
+				renderingTask.raster_y_start,
+				height);
+
+		renderingTasks.push(renderingTask);
+	}
+	void SceneRenderingJob::CreateLineRenderingTask(uint32_t taskIdx, uint32_t lineCount)
+	{
+		// TODO
+	}
+
+	void SceneRenderingJob::CreateSquareRenderingTasks(uint32_t width, uint32_t height, uint32_t squareSideSize)
+	{
+		// TODO
+	}
+
 }

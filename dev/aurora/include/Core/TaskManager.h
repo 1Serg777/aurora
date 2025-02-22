@@ -15,20 +15,7 @@ namespace aurora
 		// TODO
 	};
 
-	struct RenderingTask : Task
-	{
-		// TODO
-	};
-
-	struct SceneRenderingTask : RenderingTask
-	{
-		uint32_t raster_x_start{ 0 };
-		uint32_t raster_x_end{ 0 };
-		uint32_t raster_y_start{ 0 };
-		uint32_t raster_y_end{ 0 };
-	};
-
-	class RenderingJob
+	class Job
 	{
 	public:
 
@@ -36,14 +23,17 @@ namespace aurora
 		virtual void OnEnd();
 
 		virtual bool Started();
+		virtual bool Executed();
 		virtual bool Finished();
 
 		virtual void Reset();
 
+		virtual bool DoWork() = 0;
+
 	protected:
 
-		RenderingJob() = default;
-		virtual ~RenderingJob() = default;
+		Job() = default;
+		virtual ~Job() = default;
 
 	private:
 
@@ -51,65 +41,17 @@ namespace aurora
 		bool finished{ false };
 	};
 
-	class PathTracer;
-	class Scene;
-
-	class SceneRenderingJob : public RenderingJob
-	{
-	public:
-
-		SceneRenderingJob(PathTracer* pathTracer, Scene* scene);
-		virtual ~SceneRenderingJob() = default;
-
-		void OnStart() override;
-
-		bool AcquireRenderingTask(SceneRenderingTask& renderingTask);
-
-		void NotifyRenderingTaskFinished(const SceneRenderingTask& renderingTask);
-
-		PathTracer* pathTracer{ nullptr };
-		Scene* scene{ nullptr };
-
-	private:
-
-		void InitializeRenderingTasks();
-
-		void CreateLineRenderingTasks(uint32_t width, uint32_t height, uint32_t lineCount);
-		void CreateLineRenderingTask(uint32_t taskIdx, uint32_t lineCount);
-
-		void CreateSquareRenderingTasks(uint32_t width, uint32_t height, uint32_t squareSideSize);
-
-		std::mutex renderingTaskMutex{};
-		std::mutex notificationMutex{};
-
-		std::stack<SceneRenderingTask> renderingTasks;
-
-		uint32_t tasksToDo{};
-		uint32_t tasksDone{};
-
-		double donePercentage{};
-
-		uint32_t lineCount{};
-		uint32_t imageWidth{};
-		uint32_t imageHeight{};
-	};
-
 	class Worker
-	{
-		// TODO
-	};
-
-	class RenderingWorker : public Worker
 	{
 	public:
 
 		void Start();
 		void Stop();
-
-		// Call from the main thread!
 		void Wait();
+		void Detach();
 
-		void SetRenderingJob(SceneRenderingJob* renderingJob);
+		void SetJob(Job* job);
+		void RemoveJob();
 
 		bool Running() const;
 		bool Executing() const;
@@ -118,11 +60,11 @@ namespace aurora
 
 		void StartImpl();
 
-		std::mutex renderingJobMutex{};
+		std::mutex jobMutex{};
 
 		std::thread execThread;
 
-		SceneRenderingJob* renderingJob{ nullptr };
+		Job* job{ nullptr };
 
 		bool running{ false };
 		bool executing{ false };
@@ -132,16 +74,16 @@ namespace aurora
 	{
 	public:
 
-		void InitializeRenderingWorkers(uint32_t threadCount);
+		void InitializeWorkers(uint32_t threadCount);
 
-		void AddRenderingJob(std::shared_ptr<SceneRenderingJob> renderingJob);
+		void AddJob(std::shared_ptr<Job> job);
 
-		void ExecuteRenderingJob();
-		void ExecuteRenderingJobs();
+		void ExecuteTopJob();
+		void ExecuteAllJobs();
 
 	private:
 
-		std::vector<std::unique_ptr<RenderingWorker>> renderingWorkers;
-		std::stack<std::shared_ptr<SceneRenderingJob>> sceneRenderingJobs;
+		std::vector<std::unique_ptr<Worker>> workers;
+		std::stack<std::shared_ptr<Job>> jobs;
 	};
 }

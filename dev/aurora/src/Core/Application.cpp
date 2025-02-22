@@ -88,7 +88,7 @@ namespace aurora
 		// threadCount = 1;
 
 		taskManager = std::make_unique<TaskManager>();
-		taskManager->InitializeRenderingWorkers(threadCount);
+		taskManager->InitializeWorkers(threadCount);
 	}
 	
 	void Application::CreateDemoScene()
@@ -214,7 +214,7 @@ namespace aurora
 
 		CreateSceneRenderingJob(scene);
 
-		taskManager->ExecuteRenderingJobs();
+		taskManager->ExecuteAllJobs();
 
 		// 2. Tone mapping
 
@@ -237,7 +237,7 @@ namespace aurora
 			std::make_unique<SceneRenderingJob>(
 				pathTracer.get(), scene.get());
 
-		taskManager->AddRenderingJob(sceneRenderingJob);
+		taskManager->AddJob(sceneRenderingJob);
 	}
 
 	void Application::RenderScene(std::shared_ptr<Scene> scene)
