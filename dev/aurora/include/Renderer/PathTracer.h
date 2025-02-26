@@ -84,6 +84,7 @@ namespace aurora
 		virtual ~SceneRenderingJob() = default;
 
 		void OnStart() override;
+		void OnEnd() override;
 
 		bool DoWork() override;
 

@@ -11,8 +11,27 @@ namespace aurora
 	enum class LightType
 	{
 		DIRECTIONAL,
-		SPHERICAL,
+		POINT,
 		AREA
+	};
+
+	class Light;
+
+	struct LightSampleData
+	{
+		numa::Vec3 wi{};
+		numa::Vec3 pos{};
+
+		numa::Vec3 Li{};
+
+		Light* lightPtr{ nullptr };
+	};
+
+	struct LightSampleBundle
+	{
+		void AddLightSample(const LightSampleData& lightSample);
+
+		std::vector<LightSampleData> bundle;
 	};
 
 	class Light : public Actor
@@ -21,13 +40,9 @@ namespace aurora
 
 		Light(LightType type, std::string_view lightName);
 
-		virtual numa::Vec3 GetLightDirection(const numa::Vec3& point) const = 0;
-		virtual numa::Vec3 GetLightPosition() const = 0;
+		virtual void Sample(const numa::Vec3& p, LightSampleData& data) = 0;
 
 		LightType GetLightType() const;
-
-		numa::Vec3 color{ 1.0f, 1.0f, 1.0f };
-		float intensity{ 1.0f };
 
 	private:
 
@@ -38,57 +53,46 @@ namespace aurora
 	{
 	public:
 
-		DirectionalLight();
-		DirectionalLight(std::string_view lightName);
+		DirectionalLight(std::string_view lightName, const numa::Vec3& lightColor, float lightStrength);
 
-		numa::Vec3 GetLightDirection(const numa::Vec3& point) const override;
-		numa::Vec3 GetLightPosition() const override;
+		void Sample(const numa::Vec3& p, LightSampleData& data) override;
 
-		numa::Vec3 GetLight() const;
+		numa::Vec3 Pos() const;
+
+		numa::Vec3 Wi() const;
+		numa::Vec3 Li() const;
+
+	private:
+
+		numa::Vec3 color{ 1.0f, 1.0f, 1.0f };
+		float strength{ 1.0f };
 	};
 
-	class SphericalLight : public Light
+	class PointLight : public Light
 	{
 	public:
 
-		SphericalLight();
-		SphericalLight(std::string_view lightName);
+		PointLight(std::string_view lightName, const numa::Vec3& lightColor, float lightIntensity);
 
-		numa::Vec3 GetLightDirection(const numa::Vec3& point) const override;
-		numa::Vec3 GetLightPosition() const override;
+		void Sample(const numa::Vec3& p, LightSampleData& data) override;
 
-		numa::Vec3 GetLight(const numa::Vec3& point) const;
+		numa::Vec3 Pos() const;
+
+		numa::Vec3 Wi(const numa::Vec3& p) const;
+		numa::Vec3 Li(float d) const;
+
+	private:
+
+		numa::Vec3 color{ 1.0f, 1.0f, 1.0f };
+		float intensity{ 1.0f };
 	};
 
 	class AreaLight : public Light
 	{
 	public:
 
-		AreaLight();
 		AreaLight(std::string_view lightName);
 
-		numa::Vec3 GetLightDirection(const numa::Vec3& point) const override;
-		numa::Vec3 GetLightPosition() const override;
-	};
-
-	struct LightHitData : GeometryRayHit
-	{
-		numa::Vec3 lightDir{};
-		numa::Vec3 lightPos{};
-
-		Light* lightPtr{};
-		numa::Vec3 light{};
-		numa::Vec3 lightColor{};
-		float lightIntensity{};
-
-		// That's needed for volume rendering,
-		// for the Ray-Marching algorithm in particular.
-		GeometryRayHit lightPathInVolume{};
-		numa::Vec3 lightEnterPoint{};
-	};
-
-	struct LightHitBundle
-	{
-		std::vector<LightHitData> lightHitBundle;
+		void Sample(const numa::Vec3& p, LightSampleData& data) override;
 	};
 }

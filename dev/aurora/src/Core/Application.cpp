@@ -141,10 +141,11 @@ namespace aurora
 		numa::Vec3 fuzzyMetalSphereAlbedo{ 0.5f, 0.5f, 0.5f };
 		std::shared_ptr<Metal> fuzzyMetalSphereMaterial = std::make_shared<Metal>(fuzzyMetalSphereAlbedo, 0.5f);
 
-		float absorptionCoefficient{ 1.0f };
+		float sigma_a{ 0.5f };
+		float sigma_s{ 0.5f };
 		numa::Vec3 mediumColor{ 0.8f };
 		std::shared_ptr<ParticipatingMedium> participatingMediumSphereMaterial =
-			std::make_shared<ParticipatingMedium>(mediumColor, absorptionCoefficient);
+			std::make_shared<ParticipatingMedium>(mediumColor, sigma_a, sigma_s);
 
 		numa::Vec3 lambertianPlaneAlbedo{ 0.48f, 0.65f, 0.28f };
 		std::shared_ptr<Lambertian> lambertianPlaneMaterial = std::make_shared<Lambertian>(lambertianPlaneAlbedo);

@@ -16,15 +16,14 @@ namespace aurora
 			return false;
 		}
 
-		bool hit = geometry->Intersect(ray, rayHit);
-		rayHit.hit = hit;
+		rayHit.hit = geometry->Intersect(ray, rayHit);
 
 		if (rayHit.hit)
 		{
 			rayHit.hitActor = this;
 		}
 
-		return hit;
+		return rayHit.hit;
 	}
 
 	void Actor::SetGeometry(std::shared_ptr<Geometry> geometry)

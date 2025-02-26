@@ -21,6 +21,8 @@
 
 namespace aurora
 {
+	static constexpr float bias{ 0.00001f };
+
 	void PathTracer::InitializePixelBuffer(uint32_t width, uint32_t height)
 	{
 		pixelBuffer.reset();
@@ -191,7 +193,6 @@ namespace aurora
 	{
 		numa::Vec3 pointAlbedo = lambertian->GetMaterialAlbedo();
 
-		float bias{ 0.00001f };
 		numa::Vec3 hitPoint = rayHit.hitPoint + bias * rayHit.hitNormal;
 
 		// Indirect lighting
@@ -222,7 +223,6 @@ namespace aurora
 	{
 		numa::Vec3 attenuation = metal->GetAttenuation();
 
-		float bias{ 0.00001f };
 		numa::Vec3 hitPoint = rayHit.hitPoint + bias * rayHit.hitNormal;
 
 		numa::Vec3 reflectedDir = metal->Reflect(rayHit.hitRay.GetDirection(), rayHit.hitNormal);
@@ -251,7 +251,6 @@ namespace aurora
 		numa::Vec3 attenuation = dielectric->GetAttenuation();
 		numa::Vec3 color{ 0.0f, 0.0f, 0.0f };
 
-		float bias{ 0.00001f };
 		float rayDir_dot_hitNorm = numa::Dot(rayHit.hitRay.GetDirection(), rayHit.hitNormal);
 		if (rayDir_dot_hitNorm < 0.0f) // We're entering the object!
 		{
@@ -291,45 +290,89 @@ namespace aurora
 	}
 	numa::Vec3 PathTracer::ShadeParticipatingMedium(const ActorRayHit& rayHit, const Scene& scene, const ParticipatingMedium* medium, int rayDepth)
 	{
-		float bias{ 0.00001f };
-
-		// 1. Handle entry into the volume
+		// 1. Handle the ray inside the medium
+		//    Assume that there's no nested objects inside the volume,
+		//    so we can directly figure out the exit point without
+		//    having to check every actor in the scene.
+		// 
+		//    [TODO]
+		//    At some point later on, I should probably figure out a way
+		//    to relax that assumption.
 
 		numa::Ray insideVolumeRay{
 			numa::Vec3{ rayHit.hitPoint - bias * rayHit.hitNormal },
 			numa::Vec3{ rayHit.hitRay.GetDirection() }
 		};
 
-		// 2. Assume that there's no nested objects inside the volume,
-		//    so we can directly figure out the exit point without
-		//    sending the ray through the scene.
-
-		ActorRayHit exitPointHit{};
-
 		Actor* volumeActor = rayHit.hitActor;
-		bool exitPointIntersect = volumeActor->Intersect(insideVolumeRay, exitPointHit);
-
-		if (!exitPointIntersect) // Intersection was tangent to the volume
+		ActorRayHit exitPointHit{};
+		bool exitPointHitCheck = volumeActor->Intersect(insideVolumeRay, exitPointHit);
+		if (!exitPointHitCheck) // Intersection was tangent to the volume
 		{
-			// What should we return?
+			// What should we return? Background or atmosphere color, that is, L(0)?
+			// return numa::Vec3{ 0.0f };
 
-			return numa::Vec3{ 0.0f };
+			numa::Ray behindVolumeRay{
+				numa::Vec3{ exitPointHit.hitPoint + bias * exitPointHit.hitNormal },
+				numa::Vec3{ exitPointHit.hitRay.GetDirection() }
+			};
+
+			return ComputeColor(behindVolumeRay, scene, rayDepth);
 		}
 
 		assert(rayHit.hitActor == exitPointHit.hitActor && "The volume must not have any nested objects!");
 
-		float distance = exitPointHit.hitDistance;
-		float transmittance = medium->GetTransmittanceValue(distance);
+		// 2. Now we can start integration.
+		//    There are generally two ways to integrate the equation
+		//    1) From the camera ray side where the radiance exits the volume toward it
+		//    2) From the point where the radiance enters the volume in the camera ray direction
+		//    You're free to pick whatever's easier for you, but there are a couple of benefits
+		//    to using the first approach.
+		//    For the sake of learning, I will try to implement both approaches here.
 
-		// 3. Handle exit out of the volume
+		float Tr{ 1.0f };
+
+		uint32_t segments = 32;
+		float t = exitPointHit.hitDistance;
+		float dt = t / segments;
+
+		// 2.1 Integrating from the camera ray direction. The side closest to the camera ray.
+
+		for (uint32_t segment = 0; segment < segments; segment++)
+		{
+			// Move to the next segment and add some jitter within it.
+
+			float t_prime_jitter = 0.5f * dt; // or 't_shift'; could make the jitter random within 'dt'
+			float t_prime = segment * dt + t_prime_jitter; // or 'segment_t'
+
+			// Find the point corresponding to 't_prime'
+
+			numa::Vec3 p_prime = insideVolumeRay.GetPoint(t_prime); // 'segment_p'
+
+			// Calculate the segment transmittance as well as the transmittance from 'p_prime' to 'p'
+			// where 'p' is where the camera ray entered the volume.
+
+			float segment_Tr = medium->ComputeTransmittance(p_prime, dt);
+			Tr *= segment_Tr;
+
+			// [TODO]
+		}
+
+		// [TODO]
+		// 2.2 Integrating from the radiance entrance direction. The side where L0 enters the volume.
+		// [TODO]
+
+		// 3. Handle the background or atmosphere color.
+		//    That is, the color that is behind the medium, which is
+		//    also denoted L(0) in the Equation of Transfer.
 
 		numa::Ray behindVolumeRay{
 			numa::Vec3{ exitPointHit.hitPoint + bias * exitPointHit.hitNormal },
 			numa::Vec3{ exitPointHit.hitRay.GetDirection() }
 		};
-		numa::Vec3 backgroundColor = ComputeColor(behindVolumeRay, scene, rayDepth);
+		numa::Vec3 L0 = ComputeColor(behindVolumeRay, scene, rayDepth);
 
-		return transmittance * backgroundColor + (1.0f - transmittance) * medium->mediumColor;	
+		return Tr * L0 + (1.0f - Tr) * medium->GetMediumColor();
 	}
 
 	const f32PixelBuffer* PathTracer::GetPixelBuffer() const
@@ -353,6 +396,14 @@ namespace aurora
 		uint32_t imageWidth = camera->GetCameraResolution_X();
 		uint32_t imageHeight = camera->GetCameraResolution_Y();
 		pathTracer->InitializePixelBuffer(imageWidth, imageHeight);
+
+		std::clog << "Rendering scene '" << scene->GetSceneName() << "'...\n";
+	}
+	void SceneRenderingJob::OnEnd()
+	{
+		Job::OnStart();
+
+		std::clog << "\nDone rendering scene! Tasks finished: " << tasksDone << " out of " << tasksToDo << "\n";
 	}
 
 	bool SceneRenderingJob::DoWork()
@@ -407,17 +458,17 @@ namespace aurora
 
 		donePercentage += taskPercentage;
 
-		std::clog << "\rProgress: " << std::setprecision(3) << donePercentage * 100.0f << "% " << std::flush;
+		std::clog << "\rProgress: " << std::setprecision(3) << donePercentage * 100.0f << "%   ";
 
 		std::lock_guard<std::mutex> lockTask{ renderingTaskMutex };
 
 		// if (renderingTasks.empty())
-			// OnEnd();
+			// End();
 
 		tasksDone++;
 
 		if (tasksDone == tasksToDo)
-			OnEnd();
+			End();
 	}
 
 	void SceneRenderingJob::InitializeRenderingTasks()

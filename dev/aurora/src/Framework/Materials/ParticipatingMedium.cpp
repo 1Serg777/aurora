@@ -1,19 +1,57 @@
 #include "Framework/Materials/ParticipatingMedium.h"
 
+#include "Numa.h"
+
 namespace aurora
 {
 	ParticipatingMedium::ParticipatingMedium()
 		: Material(MaterialType::PARTICIPATING_MEDIUM)
 	{
 	}
-	ParticipatingMedium::ParticipatingMedium(const numa::Vec3& mediumColor, float absorptionCoefficient)
+	ParticipatingMedium::ParticipatingMedium(const numa::Vec3& mediumColor, float sigma_a, float sigma_s)
 		: Material(MaterialType::PARTICIPATING_MEDIUM),
-		mediumColor(mediumColor), absorptionCoefficient(absorptionCoefficient)
+		mediumColor(mediumColor),
+		sigma_a(sigma_a), sigma_s(sigma_s)
 	{
 	}
 
-	float ParticipatingMedium::GetTransmittanceValue(float distance) const
+	float ParticipatingMedium::EvaluatePhaseFunction(float cosTheta) const
 	{
-		return std::expf(-absorptionCoefficient * distance);
+		// 1. Uniform phase function
+
+		static constexpr float p = 1.0f / (4.0f * numa::Pi<float>());
+		return p;
+
+		// 2. Heyney-Greenstein phase function
+		// [TODO]
+	}
+
+	float ParticipatingMedium::ComputeTransmittance(float distance) const
+	{
+		return std::expf(-GetExitanceCoefficient() * distance);
+	}
+	float ParticipatingMedium::ComputeTransmittance(const numa::Vec3& p, float distance) const
+	{
+		// [TODO]
+		// Introduce some 'absorption', 'scattering', or 'density' variation function of 'p'.
+		return std::expf(-GetExitanceCoefficient() * distance);
+	}
+
+	const numa::Vec3& ParticipatingMedium::GetMediumColor() const
+	{
+		return mediumColor;
+	}
+
+	float ParticipatingMedium::GetAbsorptionCoefficient() const
+	{
+		return sigma_a;
+	}
+	float ParticipatingMedium::GetScatteringCoefficient() const
+	{
+		return sigma_s;
+	}
+	float ParticipatingMedium::GetExitanceCoefficient() const
+	{
+		return sigma_a + sigma_s;
 	}
 }

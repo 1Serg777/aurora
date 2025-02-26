@@ -9,12 +9,12 @@ namespace aurora
 {
 	// RenderingJob class
 
-	void Job::OnStart()
+	void Job::Start()
 	{
 		executed = true;
 		finished = false;
 	}
-	void Job::OnEnd()
+	void Job::End()
 	{
 		executed = false;
 		finished = true;
@@ -145,6 +145,7 @@ namespace aurora
 			return;
 
 		std::shared_ptr<Job> job = jobs.top();
+		job->Start();
 		job->OnStart();
 
 		for (auto& worker : workers)
@@ -160,6 +161,7 @@ namespace aurora
 			// worker->Detach();
 		}
 
+		job->OnEnd();
 		jobs.pop();
 	}
 	void TaskManager::ExecuteAllJobs()
@@ -175,6 +177,7 @@ namespace aurora
 		while (!jobs.empty())
 		{
 			std::shared_ptr<Job> job = jobs.top();
+			job->Start();
 			job->OnStart();
 
 			// 1. Send the job
@@ -199,6 +202,7 @@ namespace aurora
 				worker->RemoveJob();
 			}
 
+			job->OnEnd();
 			jobs.pop();
 		}
 

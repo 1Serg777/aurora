@@ -19,8 +19,11 @@ namespace aurora
 	{
 	public:
 
-		virtual void OnStart();
-		virtual void OnEnd();
+		void Start();
+		virtual void OnStart() {};
+
+		void End();
+		virtual void OnEnd() {};
 
 		virtual bool Started();
 		virtual bool Executed();

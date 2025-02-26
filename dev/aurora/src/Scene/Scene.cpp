@@ -43,6 +43,50 @@ namespace aurora
 
 		return closest_distance != std::numeric_limits<float>::max();
 	}
+	bool Scene::IntersectLights(const numa::Vec3& p, LightSampleBundle& lightBundle)
+	{
+		bool anyLightInView{ false };
+		for (auto& light : lights)
+		{
+			// Sample the light source
+
+			LightSampleData lightSample{};
+			light->Sample(p, lightSample);
+
+			// Create a ray toward the light source
+
+			numa::Ray lightRay{
+				p, // 'bias' should be handled elsewhere!
+				lightSample.wi
+			};
+
+			// Find if there's anything blocking the the path
+
+			float distanceToLight = numa::Length(lightSample.pos - p);
+
+			bool blocking{ false };
+			for (auto& actor : actors)
+			{
+				ActorRayHit hit{};
+				if (actor->Intersect(lightRay, hit))
+				{
+					if (hit.hitDistance < distanceToLight)
+					{
+						blocking = true;
+						break;
+					}
+				}
+			}
+
+			if (!blocking)
+			{
+				lightBundle.AddLightSample(lightSample);
+				anyLightInView = true;
+			}
+		}
+		return anyLightInView;
+	}
+
 	void Scene::AddActor(std::shared_ptr<Actor> actor)
 	{
 		actors.push_back(actor);
@@ -51,22 +95,27 @@ namespace aurora
 	{
 		this->camera = camera;
 	}
-	void Scene::AddDirectionalLight(std::shared_ptr<DirectionalLight> directionalLight)
+	void Scene::AddDirectionalLight(std::shared_ptr<DirectionalLight> light)
 	{
-		this->directionalLight = directionalLight;
+		lights.push_back(light);
 	}
 
-	const std::string& Scene::GetSceneName() const
+	const std::vector<std::shared_ptr<Actor>>& Scene::GetActors() const
 	{
-		return sceneName;
+		return actors;
+	}
+	const std::vector<std::shared_ptr<Light>>& Scene::GetLights() const
+	{
+		return lights;
 	}
 
 	Camera* Scene::GetCamera() const
 	{
 		return camera.get();
 	}
-	DirectionalLight* Scene::GetDirectionalLight() const
+
+	const std::string& Scene::GetSceneName() const
 	{
-		return directionalLight.get();
+		return sceneName;
 	}
 }
