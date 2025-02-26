@@ -129,6 +129,10 @@ namespace aurora
 		lambertianPlaneTransform->SetWorldPosition(numa::Vec3{ 0.0f, -1.0f, 0.0f });
 		lambertianPlaneTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
+		std::shared_ptr<Transform> dirLightTransform = std::make_shared<Transform>();
+		dirLightTransform->SetWorldPosition(numa::Vec3{ 0.0f, 10.0f, 0.0f });
+		dirLightTransform->SetRotation(numa::Vec3{ -45.0f, 45.0f, 0.0f });
+
 		// Materials
 
 		numa::Vec3 lamberttianSphereAlbedo{ 0.28f, 0.48f, 0.65f };
@@ -196,6 +200,14 @@ namespace aurora
 		lambertianPlaneActor->SetGeometry(lambertianPlaneGeometry);
 		lambertianPlaneActor->SetMaterial(lambertianPlaneMaterial);
 
+		numa::Vec3 dirLightCol{ 0.8f, 0.8f, 0.8f };
+		float dirLightStrength{ 25.0f };
+
+		std::shared_ptr<DirectionalLight> dirLightActor = std::make_shared<DirectionalLight>(
+			"Directional Light", dirLightCol, dirLightStrength);
+
+		dirLightActor->SetTransform(dirLightTransform);
+
 		// 3. Adding the actors
 
 		demoScene->AddCamera(camera);
@@ -205,6 +217,8 @@ namespace aurora
 		demoScene->AddActor(fuzzyMetalSphereActor);
 		demoScene->AddActor(participatingMediumSphereActor);
 		demoScene->AddActor(lambertianPlaneActor);
+
+		demoScene->AddDirectionalLight(dirLightActor);
 
 		sceneManager->SetActiveScene(demoScene);
 	}

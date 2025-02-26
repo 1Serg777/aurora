@@ -305,22 +305,23 @@ namespace aurora
 		};
 
 		Actor* volumeActor = rayHit.hitActor;
-		ActorRayHit exitPointHit{};
-		bool exitPointHitCheck = volumeActor->Intersect(insideVolumeRay, exitPointHit);
-		if (!exitPointHitCheck) // Intersection was tangent to the volume
+
+		ActorRayHit camRayExitPointHit{};
+		bool camRayExitPointHitCheck = volumeActor->Intersect(insideVolumeRay, camRayExitPointHit);
+		if (!camRayExitPointHitCheck || camRayExitPointHit.hitDistance < bias) // Intersection was tangent to the volume
 		{
 			// What should we return? Background or atmosphere color, that is, L(0)?
 			// return numa::Vec3{ 0.0f };
 
 			numa::Ray behindVolumeRay{
-				numa::Vec3{ exitPointHit.hitPoint + bias * exitPointHit.hitNormal },
-				numa::Vec3{ exitPointHit.hitRay.GetDirection() }
+				numa::Vec3{ camRayExitPointHit.hitPoint + bias * camRayExitPointHit.hitNormal },
+				numa::Vec3{ camRayExitPointHit.hitRay.GetDirection() }
 			};
 
 			return ComputeColor(behindVolumeRay, scene, rayDepth);
 		}
 
-		assert(rayHit.hitActor == exitPointHit.hitActor && "The volume must not have any nested objects!");
+		assert(rayHit.hitActor == camRayExitPointHit.hitActor && "The volume must not have any nested objects!");
 
 		// 2. Now we can start integration.
 		//    There are generally two ways to integrate the equation
@@ -332,12 +333,14 @@ namespace aurora
 
 		float Tr{ 1.0f };
 
-		uint32_t segments = 32;
-		float t = exitPointHit.hitDistance;
+		uint32_t segments = 16;
+		float t = camRayExitPointHit.hitDistance;
 		float dt = t / segments;
 
 		// 2.1 Integrating from the camera ray direction. The side closest to the camera ray.
 
+		numa::Vec3 wo = -rayHit.hitRay.GetDirection();
+		numa::Vec3 Lo{ 0.0f };
 		for (uint32_t segment = 0; segment < segments; segment++)
 		{
 			// Move to the next segment and add some jitter within it.
@@ -355,7 +358,112 @@ namespace aurora
 			float segment_Tr = medium->ComputeTransmittance(p_prime, dt);
 			Tr *= segment_Tr;
 
-			// [TODO]
+			// In scattering contribution
+
+			numa::Vec3 Ls{ 0.0f };
+			for (auto& light : scene.GetLights())
+			{
+				// Sample the light retrieving all the necessary information we need about it.
+				// This includes light direction 'wi', radiance 'Li', and position 'p'.
+
+				LightSampleData lightSampleData{};
+				light->Sample(p_prime, lightSampleData);
+
+				// Now we need to make sure that there's nothing in our way to reach the light.
+				// Again, the assumption is that there's nothing inside the volume, thus
+				// the only objects obstructing the view can be outside the medium.
+
+				numa::Ray lightRay{
+					p_prime,
+					lightSampleData.wi
+				};
+
+				// Now we want to figure out where the radiance from the light source enters the volume.
+				// The assumption is that we're definitely inside the volume and it's not the edge case,
+				// where the camera ray grazes the volume at a point. We took care of that earlier.
+
+				ActorRayHit lightEntryHit{};
+				bool lightEntryHitCheck = volumeActor->Intersect(lightRay, lightEntryHit);
+				assert(lightEntryHitCheck && "Must be an exit point from the inside of the volume!");
+
+				// TEST
+				if (!lightEntryHitCheck) continue;
+				// TEST
+
+				numa::Vec3 lightEntryPoint = lightRay.GetPoint(lightEntryHit.hitDistance);
+				float inVolumeLightDistance = lightEntryHit.hitDistance;
+
+				// Now when that out of the way, we want to know whether any of the objects obstructs the view
+				// from the light source toward the volume at the 'lightEntryPoint' point.
+
+				numa::Ray shadowRay{
+					lightEntryPoint + bias * lightEntryHit.hitNormal,
+					lightSampleData.wi
+				};
+
+				ActorRayHit occludingActorHit{};
+				if (scene.IntersectClosest(shadowRay, occludingActorHit))
+					continue; // something occluding the view from the light source, so we just move on to the next light
+
+				// Nothing is occluding the view from the light source,
+				// so we can compute the in scattering contribution from that particular light source.
+				// 
+				// We divide the light path into segments and figure out the transmittance
+				// over that path by integrating it from the light entry point 'lightEntryPoint',
+				// to the camera ray segment point 'p_prime'.
+
+				uint32_t light_segments = 16;
+				float light_t = inVolumeLightDistance;
+				float light_dt = light_t / light_segments;
+
+				float light_path_Tr{ 1.0f };
+				// float light_path_tau{ 0.0f }; // light path optical thickness
+				for (uint32_t light_segment = 0; light_segment < light_segments; light_segment++)
+				{
+					// Move to the next light path segment and add some jitter within it.
+
+					float light_t_prime_jitter = 0.5f * light_dt; // or 'light_t_shift'; could make the jitter random within 'light_dt'
+					float light_t_prime = light_segment * light_dt + light_t_prime_jitter; // or 'light_segment_t'
+
+					// Find the point corresponding to 'light_t_prime'
+
+					numa::Vec3 light_p_prime = lightRay.GetPoint(light_t_prime); // 'segment_p'
+
+					// Since 'light_dt' value is constant for all light path segments, we can actually
+					// simplify the computation of the light path transmittance a bit.
+					// 
+					// e^{-sigma_t_1 * light_dt} * e^{-sigma_t_2 * light_dt} * ... * e^{-sigma_t_n * light_dt}
+					//
+					// You can see from the expression above that we can simply find a sum
+					// of the exitance coefficients at each light path segment and compute 'e to the power' only once.
+					
+					// light_path_tau += medium->GetExitanceCoefficient();
+
+					// However, since we don't have any variation in either the absorption coefficient 'sigma_a'
+					// or the scattering coefficient 'sigma_s', I'm just going to stick to the tried and tested
+					// method of evaluating the transmittance at every light path segment and combining the results
+					// to get the full light path transmittance.
+
+					float light_segment_Tr = medium->ComputeTransmittance(light_p_prime, light_dt);
+					light_path_Tr *= light_segment_Tr;
+				}
+				// light_path_tau *= light_dt;
+
+				float cos_theta = numa::Dot(wo, lightSampleData.wi);
+				float phase_p = medium->EvaluatePhaseFunction(cos_theta);
+
+				numa::Vec3 Li = phase_p * (lightSampleData.Li * light_path_Tr);
+				Ls += Li;
+			}
+
+			// The reason why we need the scattering coefficient 'sigma_s' instead of the extinction coefficient 'sigma_t'
+			// is because the function 'Ls' itself features the so-called scattering albedo quantity which is just
+			// a ratio of 'sigma_s' over 'sigma_t'. As a result, the 'sigma_t' term in the integral
+			// eliminates the 'sigma_t' in the denominator of the scattering albedo and we end up with just 'sigma_s'.
+
+			float sigma_s = medium->GetScatteringCoefficient();
+			
+			Lo += Tr * sigma_s * Ls * dt;
 		}
 
 		// [TODO]
@@ -367,12 +475,17 @@ namespace aurora
 		//    also denoted L(0) in the Equation of Transfer.
 
 		numa::Ray behindVolumeRay{
-			numa::Vec3{ exitPointHit.hitPoint + bias * exitPointHit.hitNormal },
-			numa::Vec3{ exitPointHit.hitRay.GetDirection() }
+			numa::Vec3{ camRayExitPointHit.hitPoint + bias * camRayExitPointHit.hitNormal },
+			numa::Vec3{ camRayExitPointHit.hitRay.GetDirection() }
 		};
 		numa::Vec3 L0 = ComputeColor(behindVolumeRay, scene, rayDepth);
 
-		return Tr * L0 + (1.0f - Tr) * medium->GetMediumColor();
+		// Lo = Tr * L0 + (1.0f - Tr) * medium->GetMediumColor();
+		Lo += Tr * L0;
+		return Lo;
+
+		// The very beggining of participating medium rendering. It's not needed anymore :(
+		// return Tr * L0 + (1.0f - Tr) * medium->GetMediumColor();
 	}
 
 	const f32PixelBuffer* PathTracer::GetPixelBuffer() const
