@@ -106,8 +106,10 @@ namespace aurora
 		// Transforms
 
 		std::shared_ptr<Transform> cameraTransform = std::make_shared<Transform>();
-		cameraTransform->SetWorldPosition(numa::Vec3{ 1.5f, 1.5f, 2.5f });
-		cameraTransform->SetRotation(numa::Vec3{ -20.0f, 30.0f, 0.0f });
+		// cameraTransform->SetWorldPosition(numa::Vec3{ 1.5f, 1.5f, 2.5f });
+		// cameraTransform->SetRotation(numa::Vec3{ -20.0f, 30.0f, 0.0f });
+		cameraTransform->SetWorldPosition(numa::Vec3{ -0.5f, 0.0f, -0.5f }); // inside the volume
+		cameraTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f }); // straight forward
 
 		std::shared_ptr<Transform> lambertianSphereTransform = std::make_shared<Transform>();
 		lambertianSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, -3.0f });
@@ -131,7 +133,8 @@ namespace aurora
 
 		std::shared_ptr<Transform> dirLightTransform = std::make_shared<Transform>();
 		dirLightTransform->SetWorldPosition(numa::Vec3{ 0.0f, 10.0f, 0.0f });
-		dirLightTransform->SetRotation(numa::Vec3{ -45.0f, 45.0f, 0.0f });
+		// dirLightTransform->SetRotation(numa::Vec3{ -45.0f, 45.0f, 0.0f });
+		dirLightTransform->SetRotation(numa::Vec3{ 0.0f, -90.0f, 0.0f });
 
 		// Materials
 
@@ -143,7 +146,7 @@ namespace aurora
 		std::shared_ptr<Dielectric> dielectricMat = std::make_shared<Dielectric>(glassSphereAttenuation, glassSphereIOR);
 
 		numa::Vec3 fuzzyMetalSphereAlbedo{ 0.5f, 0.5f, 0.5f };
-		std::shared_ptr<Metal> fuzzyMetalSphereMaterial = std::make_shared<Metal>(fuzzyMetalSphereAlbedo, 0.5f);
+		std::shared_ptr<Metal> fuzzyMetalSphereMaterial = std::make_shared<Metal>(fuzzyMetalSphereAlbedo, 0.25f);
 
 		float sigma_a{ 0.5f };
 		float sigma_s{ 0.5f };
@@ -160,7 +163,10 @@ namespace aurora
 
 		// Camera
 
-		std::shared_ptr<Camera> camera = std::make_shared<Camera>(1920, 1080, 90.0f);
+		uint32_t cameraWidth{ 1280 };
+		uint32_t cameraHeight{ 720 };
+		float fov_y_deg{ 90.0f };
+		std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight, fov_y_deg);
 		camera->SetTransform(cameraTransform);
 
 		// Actors
@@ -201,7 +207,7 @@ namespace aurora
 		lambertianPlaneActor->SetMaterial(lambertianPlaneMaterial);
 
 		numa::Vec3 dirLightCol{ 0.8f, 0.8f, 0.8f };
-		float dirLightStrength{ 25.0f };
+		float dirLightStrength{ 35.0f };
 
 		std::shared_ptr<DirectionalLight> dirLightActor = std::make_shared<DirectionalLight>(
 			"Directional Light", dirLightCol, dirLightStrength);
