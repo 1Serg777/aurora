@@ -46,6 +46,8 @@ namespace aurora
 
 	private:
 
+		numa::Vec3 BackgroundColor(const numa::Ray& ray);
+
 		numa::Vec3 ComputeColor(const numa::Ray& ray, const Scene& scene, int rayDepth);
 
 		numa::Vec3 ShadeMaterial(const ActorRayHit& rayHit, const Scene& scene, int rayDepth);

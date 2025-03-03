@@ -106,10 +106,14 @@ namespace aurora
 		// Transforms
 
 		std::shared_ptr<Transform> cameraTransform = std::make_shared<Transform>();
-		// cameraTransform->SetWorldPosition(numa::Vec3{ 1.5f, 1.5f, 2.5f });
-		// cameraTransform->SetRotation(numa::Vec3{ -20.0f, 30.0f, 0.0f });
-		cameraTransform->SetWorldPosition(numa::Vec3{ -0.5f, 0.0f, -0.5f }); // inside the volume
-		cameraTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f }); // straight forward
+		cameraTransform->SetWorldPosition(numa::Vec3{ 1.5f, 1.5f, 3.5f });
+		// cameraTransform->SetWorldPosition(numa::Vec3{ 0.0f, 1.5f, 3.0f });
+		// cameraTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, 3.0f });
+		cameraTransform->SetRotation(numa::Vec3{ -20.0f, 30.0f, 0.0f });
+		// cameraTransform->SetRotation(numa::Vec3{ -20.0f, 0.0f, 0.0f });
+		// cameraTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
+		// cameraTransform->SetWorldPosition(numa::Vec3{ -0.5f, 0.0f, -0.5f }); // inside the volume
+		// cameraTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f }); // straight forward
 
 		std::shared_ptr<Transform> lambertianSphereTransform = std::make_shared<Transform>();
 		lambertianSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, -3.0f });
@@ -124,7 +128,7 @@ namespace aurora
 		fuzzyMetalSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
 		std::shared_ptr<Transform> participatingMediumSphereTransform = std::make_shared<Transform>();
-		participatingMediumSphereTransform->SetWorldPosition(numa::Vec3{ -0.5f, 0.0f, -0.5f });
+		participatingMediumSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, -0.5f });
 		participatingMediumSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
 		std::shared_ptr<Transform> lambertianPlaneTransform = std::make_shared<Transform>();
@@ -134,7 +138,9 @@ namespace aurora
 		std::shared_ptr<Transform> dirLightTransform = std::make_shared<Transform>();
 		dirLightTransform->SetWorldPosition(numa::Vec3{ 0.0f, 10.0f, 0.0f });
 		// dirLightTransform->SetRotation(numa::Vec3{ -45.0f, 45.0f, 0.0f });
-		dirLightTransform->SetRotation(numa::Vec3{ 0.0f, -90.0f, 0.0f });
+		dirLightTransform->SetRotation(numa::Vec3{ 0.0f, -90.0f + 30.0f, 0.0f });
+		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, -90.0f, 0.0f });
+		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
 		// Materials
 
@@ -146,10 +152,12 @@ namespace aurora
 		std::shared_ptr<Dielectric> dielectricMat = std::make_shared<Dielectric>(glassSphereAttenuation, glassSphereIOR);
 
 		numa::Vec3 fuzzyMetalSphereAlbedo{ 0.5f, 0.5f, 0.5f };
-		std::shared_ptr<Metal> fuzzyMetalSphereMaterial = std::make_shared<Metal>(fuzzyMetalSphereAlbedo, 0.25f);
+		std::shared_ptr<Metal> fuzzyMetalSphereMaterial = std::make_shared<Metal>(fuzzyMetalSphereAlbedo, 0.0f);
 
 		float sigma_a{ 0.5f };
+		// float sigma_a{ 0.0f };
 		float sigma_s{ 0.5f };
+		// float sigma_s{ 0.0f }; // black volume, like smoke
 		numa::Vec3 mediumColor{ 0.8f };
 		std::shared_ptr<ParticipatingMedium> participatingMediumSphereMaterial =
 			std::make_shared<ParticipatingMedium>(mediumColor, sigma_a, sigma_s);
@@ -207,7 +215,7 @@ namespace aurora
 		lambertianPlaneActor->SetMaterial(lambertianPlaneMaterial);
 
 		numa::Vec3 dirLightCol{ 0.8f, 0.8f, 0.8f };
-		float dirLightStrength{ 35.0f };
+		float dirLightStrength{ 40.0f };
 
 		std::shared_ptr<DirectionalLight> dirLightActor = std::make_shared<DirectionalLight>(
 			"Directional Light", dirLightCol, dirLightStrength);
@@ -216,7 +224,7 @@ namespace aurora
 
 		// 3. Adding the actors
 
-		demoScene->AddCamera(camera);
+		demoScene->SetCamera(camera);
 
 		demoScene->AddActor(lambertianSphereActor);
 		demoScene->AddActor(metalSphereActor);
@@ -224,7 +232,7 @@ namespace aurora
 		demoScene->AddActor(participatingMediumSphereActor);
 		demoScene->AddActor(lambertianPlaneActor);
 
-		demoScene->AddDirectionalLight(dirLightActor);
+		demoScene->AddLight(dirLightActor);
 
 		sceneManager->SetActiveScene(demoScene);
 	}

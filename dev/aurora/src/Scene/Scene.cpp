@@ -91,13 +91,18 @@ namespace aurora
 	{
 		actors.push_back(actor);
 	}
-	void Scene::AddCamera(std::shared_ptr<Camera> camera)
-	{
-		this->camera = camera;
-	}
-	void Scene::AddDirectionalLight(std::shared_ptr<DirectionalLight> light)
+	void Scene::AddLight(std::shared_ptr<DirectionalLight> light)
 	{
 		lights.push_back(light);
+	}
+
+	void Scene::SetAtmosphere(std::shared_ptr<Atmosphere> atmosphere)
+	{
+		this->atmosphere = atmosphere;
+	}
+	void Scene::SetCamera(std::shared_ptr<Camera> camera)
+	{
+		this->camera = camera;
 	}
 
 	const std::vector<std::shared_ptr<Actor>>& Scene::GetActors() const
@@ -107,6 +112,11 @@ namespace aurora
 	const std::vector<std::shared_ptr<Light>>& Scene::GetLights() const
 	{
 		return lights;
+	}
+
+	Atmosphere* Scene::GetAtmosphere() const
+	{
+		return atmosphere.get();
 	}
 
 	Camera* Scene::GetCamera() const

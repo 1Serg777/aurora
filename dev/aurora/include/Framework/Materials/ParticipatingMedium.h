@@ -13,7 +13,8 @@ namespace aurora
 		ParticipatingMedium();
 		ParticipatingMedium(const numa::Vec3& mediumColor, float sigma_a, float sigma_s);
 
-		float EvaluatePhaseFunction(float cosTheta) const;
+		float EvaluateIsotropicPhaseFunction(float cosTheta) const;
+		float EvaluateHenyeyGreensteinPhaseFunction(float cosTheta) const;
 
 		float ComputeTransmittance(float distance) const;
 		float ComputeTransmittance(const numa::Vec3& p, float distance) const;
@@ -30,5 +31,7 @@ namespace aurora
 
 		float sigma_a{ 0.0f };
 		float sigma_s{ 0.0f };
+
+		float assymetryFactor{ 0.0f };
 	};
 }

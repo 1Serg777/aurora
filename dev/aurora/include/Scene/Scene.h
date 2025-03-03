@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Framework/Actor.h"
+#include "Framework/Atmosphere.h"
 #include "Framework/Camera.h"
 #include "Framework/Light.h"
 
@@ -24,11 +25,15 @@ namespace aurora
 		bool IntersectLights(const numa::Vec3& p, LightSampleBundle& lightBundle);
 
 		void AddActor(std::shared_ptr<Actor> actor);
-		void AddCamera(std::shared_ptr<Camera> camera);
-		void AddDirectionalLight(std::shared_ptr<DirectionalLight> light);
+		void AddLight(std::shared_ptr<DirectionalLight> light);
+
+		void SetAtmosphere(std::shared_ptr<Atmosphere> atmosphere);
+		void SetCamera(std::shared_ptr<Camera> camera);
 
 		const std::vector<std::shared_ptr<Actor>>& GetActors() const;
 		const std::vector<std::shared_ptr<Light>>& GetLights() const;
+
+		Atmosphere* GetAtmosphere() const;
 
 		Camera* GetCamera() const;
 
@@ -41,6 +46,8 @@ namespace aurora
 		std::vector<std::shared_ptr<Actor>> actors;
 		std::vector<std::shared_ptr<Light>> lights;
 		
+		std::shared_ptr<Atmosphere> atmosphere;
+
 		std::shared_ptr<Camera> camera;
 	};
-}
+}	

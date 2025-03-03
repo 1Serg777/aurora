@@ -15,15 +15,24 @@ namespace aurora
 	{
 	}
 
-	float ParticipatingMedium::EvaluatePhaseFunction(float cosTheta) const
+	float ParticipatingMedium::EvaluateIsotropicPhaseFunction(float cosTheta) const
 	{
-		// 1. Uniform phase function
+		// 1. Isotropic phase function
 
 		static constexpr float p = 1.0f / (4.0f * numa::Pi<float>());
 		return p;
+	}
+	float ParticipatingMedium::EvaluateHenyeyGreensteinPhaseFunction(float cosTheta) const
+	{
+		// 2. Anisotropic Heyney-Greenstein phase function
+		
+		static constexpr double n = 1.0 / (4.0 * numa::Pi<double>());
+		double g = assymetryFactor;
 
-		// 2. Heyney-Greenstein phase function
-		// [TODO]
+		double h_x = 1.0 + g * g + 2 * g * cosTheta;
+		double f_x = n * (1.0 - g * g) / (h_x * std::sqrt(h_x));
+
+		return static_cast<float>(f_x);
 	}
 
 	float ParticipatingMedium::ComputeTransmittance(float distance) const

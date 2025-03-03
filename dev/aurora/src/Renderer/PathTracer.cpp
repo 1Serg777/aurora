@@ -115,16 +115,21 @@ namespace aurora
 		}
 	}
 
-	numa::Vec3 PathTracer::ComputeColor(const numa::Ray& ray, const Scene& scene, int rayDepth)
+	numa::Vec3 PathTracer::BackgroundColor(const numa::Ray& ray)
 	{
 		Gradient skyGradient{
-			numa::Vec3{ 1.0f, 1.0f, 1.0f },
-			numa::Vec3{ 0.5f, 0.7f, 1.0f },
+				numa::Vec3{ 1.0f, 1.0f, 1.0f },
+				numa::Vec3{ 0.5f, 0.7f, 1.0f },
 		};
 
 		float t = ray.GetDirection().y * 0.5f + 0.5f;
 		numa::Vec3 bgColor = skyGradient.GetColor(t);
 
+		return bgColor;
+	}
+
+	numa::Vec3 PathTracer::ComputeColor(const numa::Ray& ray, const Scene& scene, int rayDepth)
+	{
 		numa::Vec3 pixelColor{ 0.0f, 0.0f, 0.0f };
 
 		if (rayDepth > rayDepthLimit)
@@ -137,14 +142,21 @@ namespace aurora
 
 			if (rayHit.hitActor->HasMaterial())
 				pixelColor = ShadeMaterial(rayHit, scene, rayDepth);
-			else
-				pixelColor = bgColor;
 		}
 		else
 		{
 			// Missed, use the background color
+			// or the atmosphere color if the scene has one.
 
-			pixelColor = bgColor;
+			Atmosphere* atmosphere = scene.GetAtmosphere();
+			if (atmosphere)
+			{
+				pixelColor = atmosphere->ComputeSkyColor(ray);
+			}
+			else
+			{
+				pixelColor = BackgroundColor(ray);
+			}
 		}
 
 		return pixelColor;
@@ -177,7 +189,22 @@ namespace aurora
 			case MaterialType::PARTICIPATING_MEDIUM:
 			{
 				ParticipatingMedium* medium = static_cast<ParticipatingMedium*>(rayHit.hitActor->GetMaterial());
-				pixelColor = ShadeParticipatingMedium(rayHit, scene, medium, rayDepth);
+				if (!rayHit.hitFrontFace)
+				{
+					// We're inside the volume
+
+					ActorRayHit insideMediumRayHit = rayHit;
+					insideMediumRayHit.hitPoint = rayHit.hitRay.GetOrigin();
+					insideMediumRayHit.hitNormal = numa::Vec3{ 0.0f };
+
+					pixelColor = ShadeParticipatingMedium(insideMediumRayHit, scene, medium, rayDepth);
+				}
+				else
+				{
+					// We're outside the volume
+
+					pixelColor = ShadeParticipatingMedium(rayHit, scene, medium, rayDepth);
+				}
 			}
 			break;
 			default:
@@ -298,7 +325,7 @@ namespace aurora
 		float trimPathDistance{ bias };
 		float acceptedPathDistanceThreshold{ bias };
 
-		float singleSegmentDistanceThreshold{ 1e3 * bias };
+		float singleSegmentDistanceThreshold{ 1e3f * bias };
 
 		// 1. Handle the ray inside the medium
 		//    Assume that there's no nested objects inside the volume,
@@ -414,6 +441,7 @@ namespace aurora
 				bool lightVolumeEntryHitCheck = volumeActor->Intersect(lightRay, lightVolumeEntryHit);
 
 				// It looks like there are still cases where 'p_prime' ends up outside the volume.
+				// So that assumption we spoke of earlier, doesn't hold anymore.
 				// In this case we should just set the `inVolumeLightDistance' to zero and
 				// 'lightEntryPoint' to be the 'p_prime' point.
 				// 
@@ -503,7 +531,9 @@ namespace aurora
 				// light_path_tau *= light_dt;
 
 				float cos_theta = numa::Dot(wo, lightSampleData.wi);
-				float phase_p = medium->EvaluatePhaseFunction(cos_theta);
+
+				// float phase_p = medium->EvaluateIsotropicPhaseFunction(cos_theta);
+				float phase_p = medium->EvaluateHenyeyGreensteinPhaseFunction(cos_theta);
 
 				numa::Vec3 Li = phase_p * (lightSampleData.Li * light_path_Tr);
 				Ls += Li;
@@ -534,6 +564,8 @@ namespace aurora
 		numa::Vec3 L0 = ComputeColor(behindVolumeRay, scene, ++rayDepth);
 
 		// Lo = Tr * L0 + (1.0f - Tr) * medium->GetMediumColor();
+		// Lo *= dt; // but then don't forget to get rid of the 'dt' where the in scattering contribution is computed.
+
 		Lo += Tr * L0;
 		return Lo;
 
