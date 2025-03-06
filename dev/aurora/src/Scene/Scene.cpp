@@ -93,6 +93,7 @@ namespace aurora
 	}
 	void Scene::AddLight(std::shared_ptr<DirectionalLight> light)
 	{
+		dirLight = light.get();
 		lights.push_back(light);
 	}
 
@@ -122,6 +123,11 @@ namespace aurora
 	Camera* Scene::GetCamera() const
 	{
 		return camera.get();
+	}
+
+	DirectionalLight* Scene::GetDirectionalLight() const
+	{
+		return dirLight;
 	}
 
 	const std::string& Scene::GetSceneName() const

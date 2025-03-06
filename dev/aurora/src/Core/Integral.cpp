@@ -26,20 +26,20 @@ namespace aurora
 		float dy{ 0.0001f };
 		float dz{ 0.0001f };
 
-		uint32_t N = std::floorf((x1 - x0) / dx); // x segments
-		uint32_t M = std::floorf((y1 - y0) / dy); // y segments
-		uint32_t K = std::floorf((z1 - z0) / dz); // z segments
+		uint32_t N = static_cast<uint32_t>(std::floorf((x1 - x0) / dx)); // x segments
+		uint32_t M = static_cast<uint32_t>(std::floorf((y1 - y0) / dy)); // y segments
+		uint32_t K = static_cast<uint32_t>(std::floorf((z1 - z0) / dz)); // z segments
 
 		std::function<float(float, float, float)> integrand = [](float x, float y, float z) {
 			return 0.5f * x + 1.5f * y + z * z;
 		};
 
 		float result{ 0.0f };
-		for (uint32_t z = z0; z < z1; z += dz)
+		for (float z = z0; z < z1; z += dz)
 		{
-			for (uint32_t y = y0; y < y1; y += dy)
+			for (float y = y0; y < y1; y += dy)
 			{
-				for (uint32_t x = x0; x < x1; x += dx)
+				for (float x = x0; x < x1; x += dx)
 				{
 					// numa::Vec<float, N> x_integral{}; // N must be a constant!
 				}

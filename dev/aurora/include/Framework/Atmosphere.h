@@ -1,6 +1,9 @@
 #pragma once
 
+#include "Framework/Actor.h"
+#include "Framework/Light.h"
 #include "Framework/Components/Geometry.h"
+#include "Framework/Components/Transform.h"
 #include "Geometry/Sphere.h"
 
 #include <memory>
@@ -14,15 +17,15 @@ namespace aurora
 {
 	struct RayleighScatteringData
 	{
-		numa::Vec3 betaR0{  };
-		float HR{  };
+		numa::Vec3 betaR0{};
+		float HR{};
 	};
 
 	struct MieScatteringData
 	{
-		float betaM0{  };
-		float HM{  };
-		float mie_phase_g{  };
+		float betaM0{};
+		float HM{};
+		float mie_phase_g{};
 	};
 
 	struct AtmosphereData
@@ -41,11 +44,11 @@ namespace aurora
 			AtmosphereData atmosphereData,
 			std::string_view name);
 
-		bool Intersect(const numa::Ray& ray, GeometryRayHit& rayHit);
-		bool IntersectGround(const numa::Ray& ray, GeometryRayHit& rayHit);
-		bool IntersectAtmosphere(const numa::Ray& ray, GeometryRayHit& rayHit);
+		bool Intersect(const numa::Ray& ray, ActorRayHit& rayHit) const;
+		bool IntersectGround(const numa::Ray& ray, ActorRayHit& rayHit) const;
+		bool IntersectAtmosphere(const numa::Ray& ray, ActorRayHit& rayHit) const;
 
-		numa::Vec3 ComputeSkyColor(const numa::Ray& ray) const;
+		numa::Vec3 ComputeSkyColor(const numa::Ray& ray, DirectionalLight* dirLight) const;
 
 		float RayleighPhaseFunction(float cosTheta) const;
 		float MiePhaseFunction(float cosTheta) const;
@@ -53,13 +56,14 @@ namespace aurora
 		// Mie phase function assymetry factor (g)
 		float GetMiePhaseG() const;
 
-		Sphere* GetGroundSphere() const;
-		Sphere* GetAtmosphereSphere() const;
-
 		// Sea level Rayleigh scattering coefficient
 		numa::Vec3 GetBetaR0() const;
 		// Sea level Mie scattering coefficient
 		float GetBetaM0() const;
+
+		numa::Vec3 ComputeBetaR(const numa::Vec3& p) const;
+		float ComputeBetaM(const numa::Vec3& p) const;
+		numa::Vec3 ComputeBetaCombined(const numa::Vec3& p) const;
 
 		// Rayleigh scale height
 		float GetScaleHeightRayleigh() const;
@@ -72,24 +76,19 @@ namespace aurora
 
 		void CreateSpheres();
 
-		std::shared_ptr<Sphere> groundSphere;
-		std::shared_ptr<Sphere> atmosphereSphere;
+		float ComputeSamplePointHeight(const numa::Vec3& p) const;
 
-		AtmosphereData atmosphereData{
-			RayleighScatteringData{
-				// numa::Vec3 { 5.8e-6, 13.5e-6, 33.1e-6 }, // betaR0
-				numa::Vec3 { 3.8e-6, 13.5e-6, 33.1e-6 }, // betaR0
-				// float { 8000 }, // HR
-				float { 7994 }, // HR
-			},
-			MieScatteringData{
-				float { 21e-6f }, // betaM0
-				float { 1200 }, // HM
-				float { 0.76f }, // mie_phase_g
-			},
-			636e4,
-			642e4,
-		};
+		numa::Vec3 ComputeRayleighTransmittance(const numa::Vec3& p, float dt) const;
+		float ComputeMieTransmittance(const numa::Vec3& p, float dt) const;
+		numa::Vec3 ComputeCombinedTransmittance(const numa::Vec3& p, float dt) const;
+
+		std::shared_ptr<Actor> groundSphere;
+		std::shared_ptr<Actor> atmosphereSphere;
+
+		// std::shared_ptr<Sphere> groundSphere;
+		// std::shared_ptr<Sphere> atmosphereSphere;
+
+		AtmosphereData atmosphereData{};
 
 		std::string atmosphereName;
 	};

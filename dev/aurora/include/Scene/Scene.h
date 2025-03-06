@@ -34,8 +34,8 @@ namespace aurora
 		const std::vector<std::shared_ptr<Light>>& GetLights() const;
 
 		Atmosphere* GetAtmosphere() const;
-
 		Camera* GetCamera() const;
+		DirectionalLight* GetDirectionalLight() const;
 
 		const std::string& GetSceneName() const;
 
@@ -47,7 +47,8 @@ namespace aurora
 		std::vector<std::shared_ptr<Light>> lights;
 		
 		std::shared_ptr<Atmosphere> atmosphere;
-
 		std::shared_ptr<Camera> camera;
+
+		DirectionalLight* dirLight{ nullptr };
 	};
 }	

@@ -109,11 +109,10 @@ namespace aurora
 		cameraTransform->SetWorldPosition(numa::Vec3{ 1.5f, 1.5f, 3.5f });
 		// cameraTransform->SetWorldPosition(numa::Vec3{ 0.0f, 1.5f, 3.0f });
 		// cameraTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, 3.0f });
-		cameraTransform->SetRotation(numa::Vec3{ -20.0f, 30.0f, 0.0f });
+		// cameraTransform->SetRotation(numa::Vec3{ -20.0f, 30.0f, 0.0f });
 		// cameraTransform->SetRotation(numa::Vec3{ -20.0f, 0.0f, 0.0f });
-		// cameraTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 		// cameraTransform->SetWorldPosition(numa::Vec3{ -0.5f, 0.0f, -0.5f }); // inside the volume
-		// cameraTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f }); // straight forward
+		cameraTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f }); // straight forward
 
 		std::shared_ptr<Transform> lambertianSphereTransform = std::make_shared<Transform>();
 		lambertianSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, -3.0f });
@@ -137,8 +136,13 @@ namespace aurora
 
 		std::shared_ptr<Transform> dirLightTransform = std::make_shared<Transform>();
 		dirLightTransform->SetWorldPosition(numa::Vec3{ 0.0f, 10.0f, 0.0f });
+		// dirLightTransform->SetRotation(numa::Vec3{ -90.0f, 0.0f, 0.0f }); // zenith position (daylight)
+		dirLightTransform->SetRotation(numa::Vec3{ 0.0f, 180.0f, 0.0f }); // horizon position
+		// dirLightTransform->SetRotation(numa::Vec3{ -10.0f, 180.0f, 0.0f }); // slightly above horizon position
+		// dirLightTransform->SetRotation(numa::Vec3{ -10.0f, 0.0f, 0.0f }); // the other horizon
+		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f }); // the other horizon
 		// dirLightTransform->SetRotation(numa::Vec3{ -45.0f, 45.0f, 0.0f });
-		dirLightTransform->SetRotation(numa::Vec3{ 0.0f, -90.0f + 30.0f, 0.0f });
+		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, -90.0f + 30.0f, 0.0f });
 		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, -90.0f, 0.0f });
 		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
@@ -171,8 +175,8 @@ namespace aurora
 
 		// Camera
 
-		uint32_t cameraWidth{ 1280 };
-		uint32_t cameraHeight{ 720 };
+		uint32_t cameraWidth{ 1920 };
+		uint32_t cameraHeight{ 1080 };
 		float fov_y_deg{ 90.0f };
 		std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight, fov_y_deg);
 		camera->SetTransform(cameraTransform);
@@ -215,24 +219,46 @@ namespace aurora
 		lambertianPlaneActor->SetMaterial(lambertianPlaneMaterial);
 
 		numa::Vec3 dirLightCol{ 0.8f, 0.8f, 0.8f };
-		float dirLightStrength{ 40.0f };
+		float dirLightStrength{ 20.0f };
 
 		std::shared_ptr<DirectionalLight> dirLightActor = std::make_shared<DirectionalLight>(
 			"Directional Light", dirLightCol, dirLightStrength);
 
 		dirLightActor->SetTransform(dirLightTransform);
 
+		// Create an atmosphere (a model of the Earth)
+
+		AtmosphereData atmosphereData{
+			RayleighScatteringData{
+				// numa::Vec3 { 5.8e-6, 13.5e-6, 33.1e-6 }, // betaR0
+				numa::Vec3 { 3.8e-6, 13.5e-6, 33.1e-6 }, // betaR0
+				// float { 8000 }, // HR
+				float { 7994 }, // HR
+			},
+			MieScatteringData{
+				float { 21e-6f }, // betaM0
+				float { 1200 }, // HM
+				float { 0.76f }, // mie_phase_g
+			},
+			636e4, // Ground sphere radius
+			642e4, // Atmosphere sphere radius
+		};
+
+		std::shared_ptr<Atmosphere> earthAtmosphere = std::make_shared<Atmosphere>(atmosphereData, "Earth_Atmosphere");
+
 		// 3. Adding the actors
 
 		demoScene->SetCamera(camera);
 
-		demoScene->AddActor(lambertianSphereActor);
-		demoScene->AddActor(metalSphereActor);
-		demoScene->AddActor(fuzzyMetalSphereActor);
-		demoScene->AddActor(participatingMediumSphereActor);
-		demoScene->AddActor(lambertianPlaneActor);
+		//demoScene->AddActor(lambertianSphereActor);
+		//demoScene->AddActor(metalSphereActor);
+		//demoScene->AddActor(fuzzyMetalSphereActor);
+		//demoScene->AddActor(participatingMediumSphereActor);
+		//demoScene->AddActor(lambertianPlaneActor);
 
 		demoScene->AddLight(dirLightActor);
+
+		demoScene->SetAtmosphere(earthAtmosphere);
 
 		sceneManager->SetActiveScene(demoScene);
 	}
@@ -245,9 +271,15 @@ namespace aurora
 
 		taskManager->ExecuteAllJobs();
 
-		// 2. Tone mapping
+		// 2. Tone mapping and gamma correction
 
-		pathTracer->ToneMap();
+		// pathTracer->ToneMapReinhardtRGB();
+		// pathTracer->GammaCorrectPower12();
+
+		pathTracer->ToneMapReinhardtLuminance();
+		pathTracer->GammaCorrectPower12();
+
+		// pathTracer->ToneMap2();
 
 		// 3. Save the image in a file
 

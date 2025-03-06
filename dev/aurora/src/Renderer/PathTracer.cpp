@@ -93,7 +93,7 @@ namespace aurora
 		pixelBuffer->WritePixel(raster_coord_x, raster_coord_y, pixelColor);
 	}
 
-	void PathTracer::ToneMap()
+	void PathTracer::ToneMapReinhardtRGB()
 	{
 		uint32_t resolution_x = pixelBuffer->GetWidth();
 		uint32_t resolution_y = pixelBuffer->GetHeight();
@@ -104,13 +104,81 @@ namespace aurora
 		{
 			for (uint32_t x = 0; x < resolution_x; x++)
 			{
-				numa::Vec3 radiance = pixelBuffer->GetPixelValue(x, y);
-				
+				numa::Vec3& radiance = pixelBuffer->GetPixelValue(x, y);
+
+				radiance = radiance / (numa::Vec3{ 1.0f } + radiance);
+			}
+		}
+	}
+	void PathTracer::ToneMapReinhardtLuminance()
+	{
+		uint32_t resolution_x = pixelBuffer->GetWidth();
+		uint32_t resolution_y = pixelBuffer->GetHeight();
+
+		// Normalize pixel values
+
+		for (uint32_t y = 0; y < resolution_y; y++)
+		{
+			for (uint32_t x = 0; x < resolution_x; x++)
+			{
+				numa::Vec3 Cin = pixelBuffer->GetPixelValue(x, y);
+
+				float Lin = 0.2126 * Cin.r + 0.7152 * Cin.g + 0.0722 * Cin.b;
+				float Lout = Lin / (1.0f + Lin);
+
+				numa::Vec3 Cout = Cin * (Lout / Lin);
+
+				pixelBuffer->WritePixel(x, y, Cout);
+			}
+		}
+	}
+	void PathTracer::ToneMap2()
+	{
+		uint32_t resolution_x = pixelBuffer->GetWidth();
+		uint32_t resolution_y = pixelBuffer->GetHeight();
+
+		// Normalize pixel values
+
+		for (uint32_t y = 0; y < resolution_y; y++)
+		{
+			for (uint32_t x = 0; x < resolution_x; x++)
+			{
+				numa::Vec3& radiance = pixelBuffer->GetPixelValue(x, y);
+
+				// Apply tone mapping function
+				radiance.r = radiance.r < 1.413f ?
+					pow(radiance.r * 0.38317f, 1.0f / 2.2f) :
+					1.0f - exp(-radiance.r);
+
+				radiance.g = radiance.g < 1.413f ?
+					pow(radiance.g * 0.38317f, 1.0f / 2.2f) :
+					1.0f - exp(-radiance.g);
+
+				radiance.b = radiance.b < 1.413f ?
+					pow(radiance.b * 0.38317f, 1.0f / 2.2f) :
+					1.0f - exp(-radiance.b);
+
+				pixelBuffer->WritePixel(x, y, radiance);
+			}
+		}
+	}
+
+	void PathTracer::GammaCorrectPower12()
+	{
+		uint32_t resolution_x = pixelBuffer->GetWidth();
+		uint32_t resolution_y = pixelBuffer->GetHeight();
+
+		// Normalize pixel values
+
+		for (uint32_t y = 0; y < resolution_y; y++)
+		{
+			for (uint32_t x = 0; x < resolution_x; x++)
+			{
+				numa::Vec3& radiance = pixelBuffer->GetPixelValue(x, y);
+
 				// radiance = numa::Pow(radiance, 0.5f);
 				// radiance = numa::Pow(radiance, 1.0f / 2.2f);
 				radiance = numa::Sqrt(radiance);
-
-				pixelBuffer->WritePixel(x, y, radiance);
 			}
 		}
 	}
@@ -149,9 +217,10 @@ namespace aurora
 			// or the atmosphere color if the scene has one.
 
 			Atmosphere* atmosphere = scene.GetAtmosphere();
-			if (atmosphere)
+			DirectionalLight* dirLight = scene.GetDirectionalLight();
+			if (atmosphere && dirLight)
 			{
-				pixelColor = atmosphere->ComputeSkyColor(ray);
+				pixelColor = atmosphere->ComputeSkyColor(ray, dirLight);
 			}
 			else
 			{
@@ -451,9 +520,9 @@ namespace aurora
 					lightRay.GetPoint(lightVolumeEntryHit.hitDistance) +
 					volumeRayBias * lightVolumeEntryHit.hitNormal;
 
-				float volumeLightPathDistance = lightVolumeEntryHit.hitDistance;
+				float volumeLightPathDistance = lightVolumeEntryHit.hitDistance - trimPathDistance;
 
-				if (!lightVolumeEntryHitCheck)
+				if (!lightVolumeEntryHitCheck || volumeLightPathDistance <= acceptedPathDistanceThreshold)
 				{
 					// static int count{ 0 };
 					// std::cout << ++count << ") " << "Fell outside the volume! Camera ray distance: " << t << "\n";
@@ -599,7 +668,7 @@ namespace aurora
 	}
 	void SceneRenderingJob::OnEnd()
 	{
-		Job::OnStart();
+		Job::OnEnd();
 
 		std::clog << "\nDone rendering scene! Tasks finished: " << tasksDone << " out of " << tasksToDo << "\n";
 	}

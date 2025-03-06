@@ -40,7 +40,15 @@ namespace aurora
 		void RenderPixels(const ImageRegion& renderRegion, const Scene& scene);
 		void RenderPixel(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene);
 
-		void ToneMap();
+		// Tone Mapping Opperators
+
+		void ToneMapReinhardtRGB();
+		void ToneMapReinhardtLuminance();
+		void ToneMap2();
+
+		// Gamma Correction Procedures
+
+		void GammaCorrectPower12();
 
 		const f32PixelBuffer* GetPixelBuffer() const;
 
@@ -60,7 +68,12 @@ namespace aurora
 
 		int rayDepthLimit{ 5 };
 
-		int sampleCount{ 50 };
+		// int sampleCount{ 50 };
+		// int sampleCount{ 25 };
+		// int sampleCount{ 15 };
+		// int sampleCount{ 10 };
+		// int sampleCount{ 5 };
+		int sampleCount{ 1 };
 
 		bool multisampling{ false };
 	};
