@@ -5,36 +5,30 @@
 
 #include <iostream>
 
-namespace aurora
-{
+namespace aurora {
+
 	// RenderingJob class
 
-	void Job::Start()
-	{
+	void Job::Start() {
 		executed = true;
 		finished = false;
 	}
-	void Job::End()
-	{
+	void Job::End() {
 		executed = false;
 		finished = true;
 	}
 
-	bool Job::Started()
-	{
+	bool Job::Started() {
 		return Executed() && !Finished();
 	}
-	bool Job::Executed()
-	{
+	bool Job::Executed() {
 		return executed;
 	}
-	bool Job::Finished()
-	{
+	bool Job::Finished() {
 		return finished;
 	}
 
-	void Job::Reset()
-	{
+	void Job::Reset() {
 		executed = false;
 		finished = false;
 	}
@@ -125,42 +119,32 @@ namespace aurora
 
 	// TaskManager class
 
-	void TaskManager::InitializeWorkers(uint32_t threadCount)
-	{
+	void TaskManager::InitializeWorkers(uint32_t threadCount) {
 		workers.resize(threadCount);
-		for (uint32_t i = 0; i < threadCount; i++)
-		{
+		for (uint32_t i = 0; i < threadCount; i++) {
 			workers[i] = std::make_unique<Worker>();
 		}
 	}
 
-	void TaskManager::AddJob(std::shared_ptr<Job> job)
-	{
+	void TaskManager::AddJob(std::shared_ptr<Job> job) {
 		jobs.push(job);
 	}
 
-	void TaskManager::ExecuteTopJob()
-	{
+	void TaskManager::ExecuteTopJob() {
 		if (jobs.empty())
 			return;
-
 		std::shared_ptr<Job> job = jobs.top();
 		job->Start();
 		job->OnStart();
-
-		for (auto& worker : workers)
-		{
+		for (auto& worker : workers) {
 			worker->Start();
 			worker->SetJob(job.get());
 		}
-
-		for (auto& worker : workers)
-		{
+		for (auto& worker : workers) {
 			worker->Stop();
 			worker->Wait();
 			// worker->Detach();
 		}
-
 		job->OnEnd();
 		jobs.pop();
 	}
@@ -213,4 +197,5 @@ namespace aurora
 			// worker->Detach();
 		}
 	}
+
 }

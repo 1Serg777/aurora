@@ -14,7 +14,7 @@
 #include "Scene/Scene.h"
 
 #include "Ray.h"
-#include "Vec3.hpp"
+#include "Vec.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -68,12 +68,12 @@ namespace aurora
 
 		int rayDepthLimit{ 5 };
 
-		// int sampleCount{ 50 };
+		int sampleCount{ 50 };
 		// int sampleCount{ 25 };
 		// int sampleCount{ 15 };
 		// int sampleCount{ 10 };
 		// int sampleCount{ 5 };
-		int sampleCount{ 1 };
+		// int sampleCount{ 1 };
 
 		bool multisampling{ false };
 	};

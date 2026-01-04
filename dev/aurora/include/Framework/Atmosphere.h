@@ -11,38 +11,30 @@
 #include <string_view>
 
 #include <Ray.h>
-#include <Vec3.hpp>
+#include <Vec.hpp>
 
-namespace aurora
-{
-	struct RayleighScatteringData
-	{
+namespace aurora {
+
+	struct RayleighScatteringData {
 		numa::Vec3 betaR0{};
 		float HR{};
 	};
-
-	struct MieScatteringData
-	{
+	struct MieScatteringData {
 		float betaM0{};
 		float HM{};
 		float mie_phase_g{};
 	};
 
-	struct AtmosphereData
-	{
+	struct AtmosphereData {
 		RayleighScatteringData rayleigh{};
 		MieScatteringData mie{};
 		float groundRadius{};
 		float atmosphereRadius{};
 	};
 
-	class Atmosphere
-	{
+	class Atmosphere {
 	public:
-
-		Atmosphere(
-			AtmosphereData atmosphereData,
-			std::string_view name);
+		Atmosphere(AtmosphereData atmosphereData, std::string_view name);
 
 		bool Intersect(const numa::Ray& ray, ActorRayHit& rayHit) const;
 		bool IntersectGround(const numa::Ray& ray, ActorRayHit& rayHit) const;
@@ -73,7 +65,6 @@ namespace aurora
 		const std::string& GetAtmosphereName() const;
 
 	private:
-
 		void CreateSpheres();
 
 		float ComputeSamplePointHeight(const numa::Vec3& p) const;
@@ -84,12 +75,8 @@ namespace aurora
 
 		std::shared_ptr<Actor> groundSphere;
 		std::shared_ptr<Actor> atmosphereSphere;
-
-		// std::shared_ptr<Sphere> groundSphere;
-		// std::shared_ptr<Sphere> atmosphereSphere;
-
 		AtmosphereData atmosphereData{};
-
 		std::string atmosphereName;
 	};
+
 }

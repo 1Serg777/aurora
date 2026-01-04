@@ -8,23 +8,20 @@
 #include <filesystem>
 #include <memory>
 
-namespace aurora
-{
-	struct AppSettings
-	{
-		uint32_t physicalCoreCount{ 1 };
-		uint32_t threadCount{ 1 };
+namespace aurora {
 
-		int sampleCount{ 1 };
+	struct AppSettings {
+		uint32_t physicalCoreCount{1};
+		uint32_t threadCount{1};
 
-		bool multithreading{ false };
-		bool multisampling{ false };
+		int sampleCount{1};
+
+		bool multithreading{false};
+		bool multisampling{false};
 	};
 
-	class Application
-	{
+	class Application {
 	public:
-
 		Application(const std::filesystem::path& exePath);
 
 		void Initialize();
@@ -33,7 +30,6 @@ namespace aurora
 		void Run();
 
 	private:
-
 		void CreateImageWriter();
 		void CreateTaskManager();
 
@@ -48,9 +44,8 @@ namespace aurora
 
 		std::unique_ptr<PathTracer> pathTracer;
 		std::unique_ptr<PpmImageWriter> imageWriter;
-
 		std::unique_ptr<SceneManager> sceneManager;
-
 		std::unique_ptr<TaskManager> taskManager;
 	};
+
 }

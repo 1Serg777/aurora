@@ -1,5 +1,4 @@
 #include "Framework/Atmosphere.h"
-
 #include "Framework/Light.h"
 
 #include "Numa.h"
@@ -7,8 +6,8 @@
 
 #include <cassert>
 
-namespace aurora
-{
+namespace aurora {
+
 	Atmosphere::Atmosphere(
 		AtmosphereData atmosphereData,
 		std::string_view name)
@@ -94,6 +93,7 @@ namespace aurora
 		numa::Vec3 Tr{ 1.0f };
 
 		uint32_t segments = 32;
+		// uint32_t segments = 16;
 		float t = atmospherePathDistance;
 		float dt = t / segments;
 
@@ -105,8 +105,8 @@ namespace aurora
 		{
 			// Move to the next segment and add some jitter within it.
 
-			float t_prime_jitter = 0.5f * dt; // introdcues banding (can't be alleviated with more SPPs)
-			// float t_prime_jitter = numa::RandomFloat() * dt; // introduces noise (can be alleviated with more SPPs)
+			// float t_prime_jitter = 0.5f * dt; // introdcues banding (can't be alleviated with more SPPs)
+			float t_prime_jitter = numa::RandomFloat() * dt; // introduces noise (can be alleviated with more SPPs)
 
 			float t_prime = segment * dt + t_prime_jitter; // or 'segment_t'
 
@@ -159,6 +159,7 @@ namespace aurora
 			}
 
 			uint32_t light_segments = 32;
+			// uint32_t light_segments = 16;
 			float light_t = atmosphereLightPathDistance;
 			float light_dt = light_t / light_segments;
 
@@ -220,7 +221,8 @@ namespace aurora
 		double g_sqr = g * g;
 		double Mu_sqr = cosTheta * cosTheta;
 
-		constexpr static double factor = 3.0 / (8.0 * numa::Pi<double>());
+		// constexpr static double factor = 3.0 / (8.0 * numa::Pi<double>());
+		double factor = 3.0 / (8.0 * numa::Pi<double>());
 
 		// Source:
 		// https://www.scratchapixel.com/lessons/procedural-generation-virtual-worlds/simulating-sky/simulating-colors-of-the-sky.html
@@ -348,4 +350,5 @@ namespace aurora
 		numa::Vec3 Tr = numa::Exp(-(BetaR + BetaM) * dt);
 		return Tr;
 	}
+
 }

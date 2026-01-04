@@ -8,17 +8,14 @@
 #include <memory>
 #include <mutex>
 
-namespace aurora
-{
-	struct Task
-	{
+namespace aurora {
+
+	struct Task {
 		// TODO
 	};
 
-	class Job
-	{
+	class Job {
 	public:
-
 		void Start();
 		virtual void OnStart() {};
 
@@ -34,20 +31,16 @@ namespace aurora
 		virtual bool DoWork() = 0;
 
 	protected:
-
 		Job() = default;
 		virtual ~Job() = default;
 
 	private:
-
-		bool executed{ false };
-		bool finished{ false };
+		bool executed{false};
+		bool finished{false};
 	};
 
-	class Worker
-	{
+	class Worker {
 	public:
-
 		void Start();
 		void Stop();
 		void Wait();
@@ -60,11 +53,9 @@ namespace aurora
 		bool Executing() const;
 
 	private:
-
 		void StartImpl();
 
 		std::mutex jobMutex{};
-
 		std::thread execThread;
 
 		Job* job{ nullptr };
@@ -73,10 +64,8 @@ namespace aurora
 		bool executing{ false };
 	};
 
-	class TaskManager
-	{
+	class TaskManager {
 	public:
-
 		void InitializeWorkers(uint32_t threadCount);
 
 		void AddJob(std::shared_ptr<Job> job);
@@ -85,8 +74,8 @@ namespace aurora
 		void ExecuteAllJobs();
 
 	private:
-
 		std::vector<std::unique_ptr<Worker>> workers;
 		std::stack<std::shared_ptr<Job>> jobs;
 	};
+
 }

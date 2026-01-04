@@ -26,8 +26,6 @@ namespace aurora
 		numa::Vec3 rayOrigin{ 0.0f };
 		numa::Vec3 rayDirection = numa::Normalize(GeneratePixelPosition(raster_coord_x, raster_coord_y));
 
-		return numa::Ray{ rayOrigin, rayDirection };
-
 		// 2. We transform this ray to the world space
 
 		// WARNING!!!
@@ -47,6 +45,16 @@ namespace aurora
 
 		return numa::Ray{ rayOrigin, rayDirection };
 		*/
+
+		Transform* cameraTransform = GetTransform();
+		if (cameraTransform)
+		{
+			rayOrigin = cameraTransform->GetWorldPosition();
+			rayDirection = cameraTransform->GetRotationMatrix() * rayDirection;
+		}
+
+		numa::Ray cameraRay{ rayOrigin, rayDirection };
+		return cameraRay;
 	}
 	numa::Ray Camera::GenerateCameraRayJittered(uint32_t x_coord, uint32_t y_coord) const
 	{
@@ -126,7 +134,7 @@ namespace aurora
 		float camera_space_x = x_ndc * w_over_2;
 		float camera_space_y = y_ndc * h_over_2;
 
-		numa::Vec3 pixelPosition{ camera_space_x, camera_space_y, -1.0f };
+		numa::Vec3 pixelPosition{camera_space_x, camera_space_y, -focal_length};
 		return pixelPosition;
 	}
 

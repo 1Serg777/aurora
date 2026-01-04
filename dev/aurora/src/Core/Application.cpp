@@ -15,129 +15,107 @@
 #include "Framework/Geometry/Sphere.h"
 
 #include "Numa.h"
-#include "Vec3.hpp"
+#include "Vec.hpp"
 
 #include <cassert>
 
-namespace aurora
-{
+namespace aurora {
+
 	Application::Application(const std::filesystem::path& exePath)
-		: exePath(exePath)
-	{
+		: exePath(exePath) {
 	}
 
-	void Application::Initialize()
-	{
+	void Application::Initialize() {
 		CreateImageWriter();
 		pathTracer = std::make_unique<PathTracer>();
-
 		sceneManager = std::make_unique<SceneManager>();
-
 		CreateTaskManager();
 	}
-	void Application::Terminate()
-	{
+	void Application::Terminate() {
 		sceneManager.reset();
-
 		pathTracer.reset();
 		imageWriter.reset();
 	}
 
-	void Application::Run()
-	{
+	void Application::Run() {
 		CreateDemoScene();
-
 		// 1. Multiple threads
 		RenderActiveScene(sceneManager->GetActiveScene());
-
 		// 2. Single thread
 		// RenderScene(sceneManager->GetActiveScene());
 	}
 
-	void Application::CreateImageWriter()
-	{
+	void Application::CreateImageWriter() {
 		PpmImageProps ppmImageProps{};
 		ppmImageProps.maxColorValue = 255;
 		ppmImageProps.ppmImageFormat = PpmImageFormat::BINARY;
 		// ppmImageProps.ppmImageFormat = PpmImageFormat::ASCII;
-
-		if (ppmImageProps.ppmImageFormat == PpmImageFormat::ASCII)
-		{
+		if (ppmImageProps.ppmImageFormat == PpmImageFormat::ASCII) {
 			imageWriter = std::make_unique<PpmAsciiImageWriter>(ppmImageProps);
-		}
-		else if (ppmImageProps.ppmImageFormat == PpmImageFormat::BINARY)
-		{
+		} else if (ppmImageProps.ppmImageFormat == PpmImageFormat::BINARY) {
 			imageWriter = std::make_unique<PpmBinaryImageWriter>(ppmImageProps);
-		}
-		else
-		{
+		} else {
 			assert(false && "Unsupported PPM Image Format provided!");
 		}
 	}
-	void Application::CreateTaskManager()
-	{
-		uint32_t requestedThreadCount{ 16 };
+	void Application::CreateTaskManager() {
+		uint32_t requestedThreadCount{16};
 		uint32_t physicalCores = std::thread::hardware_concurrency();
-
 		uint32_t threadCount = std::clamp(requestedThreadCount, uint32_t(1), physicalCores);
-
-		// [TEST]
 		// threadCount = 16;
 		// threadCount = 8;
 		// threadCount = 4;
 		// threadCount = 1;
-
 		taskManager = std::make_unique<TaskManager>();
 		taskManager->InitializeWorkers(threadCount);
 	}
 	
-	void Application::CreateDemoScene()
-	{
+	void Application::CreateDemoScene() {
 		// Geometries
 
 		std::shared_ptr<Sphere> lambertianSphereGeometry = std::make_shared<Sphere>(1.0f);
 		std::shared_ptr<Sphere> metalSphereGeometry = std::make_shared<Sphere>(1.0f);
 		std::shared_ptr<Sphere> fuzzyMetalSphereGeometry = std::make_shared<Sphere>(1.0f);
-
 		std::shared_ptr<Sphere> participatingMediumSphereGeometry = std::make_shared<Sphere>(1.0f);
-
 		std::shared_ptr<Plane> lambertianPlaneGeometry = std::make_shared<Plane>();
 
 		// Transforms
 
 		std::shared_ptr<Transform> cameraTransform = std::make_shared<Transform>();
-		cameraTransform->SetWorldPosition(numa::Vec3{ 1.5f, 1.5f, 3.5f });
+		cameraTransform->SetWorldPosition(numa::Vec3{ 1.5f, 2.5f, 3.5f });
 		// cameraTransform->SetWorldPosition(numa::Vec3{ 0.0f, 1.5f, 3.0f });
 		// cameraTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, 3.0f });
-		// cameraTransform->SetRotation(numa::Vec3{ -20.0f, 30.0f, 0.0f });
+		cameraTransform->SetRotation(numa::Vec3{ -20.0f, 30.0f, 0.0f });
 		// cameraTransform->SetRotation(numa::Vec3{ -20.0f, 0.0f, 0.0f });
 		// cameraTransform->SetWorldPosition(numa::Vec3{ -0.5f, 0.0f, -0.5f }); // inside the volume
-		cameraTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f }); // straight forward
+		// cameraTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f }); // straight forward
 
 		std::shared_ptr<Transform> lambertianSphereTransform = std::make_shared<Transform>();
-		lambertianSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, -3.0f });
+		lambertianSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 1.0f, -3.0f });
 		lambertianSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
 		std::shared_ptr<Transform> metalSphereTransform = std::make_shared<Transform>();
-		metalSphereTransform->SetWorldPosition(numa::Vec3{ -2.0f, 0.0f, -3.0f });
+		metalSphereTransform->SetWorldPosition(numa::Vec3{ -2.0f, 1.0f, -3.0f });
 		metalSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
 		std::shared_ptr<Transform> fuzzyMetalSphereTransform = std::make_shared<Transform>();
-		fuzzyMetalSphereTransform->SetWorldPosition(numa::Vec3{ 2.0f, 0.0f, -3.0f });
+		fuzzyMetalSphereTransform->SetWorldPosition(numa::Vec3{ 2.0f, 1.0f, -3.0f });
 		fuzzyMetalSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
 		std::shared_ptr<Transform> participatingMediumSphereTransform = std::make_shared<Transform>();
-		participatingMediumSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, -0.5f });
+		participatingMediumSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 1.0f, -0.5f });
 		participatingMediumSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
 		std::shared_ptr<Transform> lambertianPlaneTransform = std::make_shared<Transform>();
-		lambertianPlaneTransform->SetWorldPosition(numa::Vec3{ 0.0f, -1.0f, 0.0f });
+		lambertianPlaneTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 		lambertianPlaneTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
 		std::shared_ptr<Transform> dirLightTransform = std::make_shared<Transform>();
 		dirLightTransform->SetWorldPosition(numa::Vec3{ 0.0f, 10.0f, 0.0f });
-		// dirLightTransform->SetRotation(numa::Vec3{ -90.0f, 0.0f, 0.0f }); // zenith position (daylight)
-		dirLightTransform->SetRotation(numa::Vec3{ 0.0f, 180.0f, 0.0f }); // horizon position
+		dirLightTransform->SetRotation(numa::Vec3{ -90.0f, 0.0f, 0.0f }); // zenith position (daylight)
+		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, 180.0f, 0.0f }); // horizon position
+		// dirLightTransform->SetRotation(numa::Vec3{ 5.0f, 180.0f, 0.0f }); // horizon position
+		// dirLightTransform->SetRotation(numa::Vec3{ 10.0f, 180.0f, 0.0f }); // horizon position
 		// dirLightTransform->SetRotation(numa::Vec3{ -10.0f, 180.0f, 0.0f }); // slightly above horizon position
 		// dirLightTransform->SetRotation(numa::Vec3{ -10.0f, 0.0f, 0.0f }); // the other horizon
 		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f }); // the other horizon
@@ -145,6 +123,7 @@ namespace aurora
 		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, -90.0f + 30.0f, 0.0f });
 		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, -90.0f, 0.0f });
 		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
+		// dirLightTransform->SetRotation(numa::Vec3{ 10.0f, 0.0f, 0.0f });
 
 		// Materials
 
@@ -166,7 +145,8 @@ namespace aurora
 		std::shared_ptr<ParticipatingMedium> participatingMediumSphereMaterial =
 			std::make_shared<ParticipatingMedium>(mediumColor, sigma_a, sigma_s);
 
-		numa::Vec3 lambertianPlaneAlbedo{ 0.48f, 0.65f, 0.28f };
+		// numa::Vec3 lambertianPlaneAlbedo{ 0.48f, 0.65f, 0.28f };
+		numa::Vec3 lambertianPlaneAlbedo{ 1.0f, 1.0f, 1.0f };
 		std::shared_ptr<Lambertian> lambertianPlaneMaterial = std::make_shared<Lambertian>(lambertianPlaneAlbedo);
 
 		// Scene definition
@@ -175,8 +155,15 @@ namespace aurora
 
 		// Camera
 
-		uint32_t cameraWidth{ 1920 };
-		uint32_t cameraHeight{ 1080 };
+		// 1920 x 1080
+		// 1280 x 720
+		// 1024 × 576
+		// 
+		// 800 x 600
+		// 400 x 240
+
+		uint32_t cameraWidth{ 800 };
+		uint32_t cameraHeight{ 600 };
 		float fov_y_deg{ 90.0f };
 		std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight, fov_y_deg);
 		camera->SetTransform(cameraTransform);
@@ -217,9 +204,10 @@ namespace aurora
 		lambertianPlaneActor->SetTransform(lambertianPlaneTransform);
 		lambertianPlaneActor->SetGeometry(lambertianPlaneGeometry);
 		lambertianPlaneActor->SetMaterial(lambertianPlaneMaterial);
+		// lambertianPlaneActor->SetMaterial(fuzzyMetalSphereMaterial); // TEST!
 
-		numa::Vec3 dirLightCol{ 0.8f, 0.8f, 0.8f };
-		float dirLightStrength{ 20.0f };
+		numa::Vec3 dirLightCol{ 1.0f, 1.0f, 1.0f };
+		float dirLightStrength{ 25.0f };
 
 		std::shared_ptr<DirectionalLight> dirLightActor = std::make_shared<DirectionalLight>(
 			"Directional Light", dirLightCol, dirLightStrength);
@@ -250,44 +238,33 @@ namespace aurora
 
 		demoScene->SetCamera(camera);
 
-		//demoScene->AddActor(lambertianSphereActor);
-		//demoScene->AddActor(metalSphereActor);
-		//demoScene->AddActor(fuzzyMetalSphereActor);
-		//demoScene->AddActor(participatingMediumSphereActor);
-		//demoScene->AddActor(lambertianPlaneActor);
+		demoScene->AddActor(lambertianSphereActor);
+		demoScene->AddActor(metalSphereActor);
+		demoScene->AddActor(fuzzyMetalSphereActor);
+		demoScene->AddActor(participatingMediumSphereActor);
+		demoScene->AddActor(lambertianPlaneActor);
 
 		demoScene->AddLight(dirLightActor);
 
-		demoScene->SetAtmosphere(earthAtmosphere);
+		// demoScene->SetAtmosphere(earthAtmosphere);
 
 		sceneManager->SetActiveScene(demoScene);
 	}
 
-	void Application::RenderActiveScene(std::shared_ptr<Scene> scene)
-	{
+	void Application::RenderActiveScene(std::shared_ptr<Scene> scene) {
 		// 1. Render the scene
-
 		CreateSceneRenderingJob(scene);
-
 		taskManager->ExecuteAllJobs();
-
 		// 2. Tone mapping and gamma correction
-
 		// pathTracer->ToneMapReinhardtRGB();
 		// pathTracer->GammaCorrectPower12();
-
 		pathTracer->ToneMapReinhardtLuminance();
 		pathTracer->GammaCorrectPower12();
-
 		// pathTracer->ToneMap2();
-
 		// 3. Save the image in a file
-
-		std::string fileName{ scene->GetSceneName() };
+		std::string fileName{scene->GetSceneName()};
 		fileName.append(".ppm");
-
 		std::filesystem::path filePath = exePath / fileName;
-
 		imageWriter->ChangeFileName(filePath.generic_string().c_str());
 		imageWriter->WritePixels(*pathTracer->GetPixelBuffer());
 	}
@@ -312,4 +289,5 @@ namespace aurora
 		pathTracer->RenderScene(scene);
 		imageWriter->WritePixels(*pathTracer->GetPixelBuffer());
 	}
+
 }

@@ -13,7 +13,6 @@
 
 #include "Numa.h"
 #include "Random.h"
-#include "Vec3.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -86,7 +85,7 @@ namespace aurora
 		}
 		else
 		{
-			numa::Ray ray = sceneCamera->GenerateCameraRay(raster_coord_x, raster_coord_y);
+			numa::Ray ray = sceneCamera->GenerateCameraRayJittered(raster_coord_x, raster_coord_y);
 			pixelColor = ComputeColor(ray, scene, rayDepth);
 		}
 
@@ -123,7 +122,7 @@ namespace aurora
 			{
 				numa::Vec3 Cin = pixelBuffer->GetPixelValue(x, y);
 
-				float Lin = 0.2126 * Cin.r + 0.7152 * Cin.g + 0.0722 * Cin.b;
+				float Lin = 0.2126f * Cin.r + 0.7152f * Cin.g + 0.0722f * Cin.b;
 				float Lout = Lin / (1.0f + Lin);
 
 				numa::Vec3 Cout = Cin * (Lout / Lin);
@@ -287,8 +286,9 @@ namespace aurora
 	}
 	numa::Vec3 PathTracer::ShadeLambertian(const ActorRayHit& rayHit, const Scene& scene, const Lambertian* lambertian, int rayDepth)
 	{
-		numa::Vec3 pointAlbedo = lambertian->GetMaterialAlbedo();
-
+		numa::Vec3 albedo = lambertian->GetMaterialAlbedo();
+		numa::Vec3 wo = -rayHit.hitRay.GetDirection();
+		numa::Vec3 n = rayHit.hitNormal;
 		numa::Vec3 hitPoint = rayHit.hitPoint + bias * rayHit.hitNormal;
 
 		// Indirect lighting
@@ -307,13 +307,54 @@ namespace aurora
 
 		// 3. Lambertian (fixed 2)
 
-		numa::Vec3 scatteredDir = numa::Normalize(rayHit.hitNormal + numa::RandomInUnitCube());
+		//numa::Vec3 wi = numa::Normalize(rayHit.hitNormal + numa::RandomInUnitCube());
 
-		if (numa::Length2(scatteredDir) < 1e-10)
-			scatteredDir = rayHit.hitNormal;
+		//if (numa::Length2(wi) < 1e-10)
+		//	wi = rayHit.hitNormal;
 
-		numa::Ray scatteredRay{ hitPoint, scatteredDir };
-		return pointAlbedo * ComputeColor(scatteredRay, scene, ++rayDepth);
+		//numa::Ray scatteredRay{ hitPoint, wi };
+
+		//float cosTheta = numa::Dot(n, wi);
+
+		//numa::Vec3 Lo = (albedo / numa::Pi<float>()) * ComputeColor(scatteredRay, scene, ++rayDepth) * cosTheta;
+
+		//return Lo;
+
+		// 4. Only evaluating lights
+
+		numa::Vec3 Lo{ 0.0f };
+
+		numa::Vec3 brdf = albedo / numa::Pi<float>();
+
+		// 4.1 Direct lighting
+
+		LightSampleBundle lightBundle{};
+		scene.IntersectLights(hitPoint, lightBundle);
+
+		for (const LightSampleData& lightSample : lightBundle.bundle)
+		{
+			// The equation is actually $Lo = (c_diff / pi) * pi * c_light * cos(theta)$, which
+			// simplifies to $Lo = c_diff * c_light * cos(theta)$
+			// where "theta" is the angle between the light direction "wi" and the surface normal "n".
+
+			Lo += brdf * lightSample.Li * numa::Dot(lightSample.wi, n);
+		}
+
+		// 4.2 Indirect lighting
+
+		numa::Vec3 wi = rayHit.hitNormal + numa::RandomInUnitCube();
+
+		if (numa::Length2(wi) < 1e-10)
+			wi = rayHit.hitNormal;
+		else
+			wi = numa::Normalize(wi);
+
+		numa::Ray scatteredRay{ hitPoint, wi };
+
+		float cosTheta = numa::Dot(n, wi);
+		Lo += brdf * ComputeColor(scatteredRay, scene, ++rayDepth) * cosTheta;
+		
+		return Lo;
 	}
 	numa::Vec3 PathTracer::ShadeMetal(const ActorRayHit& rayHit, const Scene& scene, const Metal* metal, int rayDepth)
 	{

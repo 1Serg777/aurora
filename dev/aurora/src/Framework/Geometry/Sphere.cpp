@@ -4,20 +4,17 @@
 
 #include "Intersect.h"
 
-namespace aurora
-{
+namespace aurora {
+
 	Sphere::Sphere()
-		: Geometry(GeometryType::Sphere)
-	{
+		: Geometry(GeometryType::Sphere) {
 	}
 	Sphere::Sphere(float radius)
 		: Geometry(GeometryType::Sphere),
-		radius(radius)
-	{
+		radius(radius) {
 	}
 
-	bool Sphere::Intersect(const numa::Ray& ray, GeometryRayHit& geometryHit)
-	{
+	bool Sphere::Intersect(const numa::Ray& ray, GeometryRayHit& geometryHit) {
 		numa::Sphere sphere{
 			parentActor->GetTransform()->GetWorldPosition(),
 			this->radius
@@ -80,21 +77,22 @@ namespace aurora
 		return geometryHit.hit;
 	}
 
-	float Sphere::DistanceFromEdgeNormalized(const numa::Vec3& point) const
-	{
+	float Sphere::DistanceFromEdge(const numa::Vec3& point) const {
+		return 0.0f;
+	}
+	float Sphere::DistanceFromEdgeNormalized(const numa::Vec3& point) const {
 		const numa::Vec3& point_radius_vector = point - parentActor->GetTransform()->GetWorldPosition();
 		float point_radius = numa::Length(point_radius_vector);
 		float point_radius_normalized = point_radius / radius;
 		return point_radius_normalized;
 	}
 
-	float Sphere::GetRadius() const
-	{
+	float Sphere::GetRadius() const {
 		return radius;
 	}
 
-	numa::Vec3 Sphere::ComputeNormal(const numa::Vec3& pointOnSphere) const
-	{
+	numa::Vec3 Sphere::ComputeNormal(const numa::Vec3& pointOnSphere) const {
 		return numa::Normalize(pointOnSphere - parentActor->GetTransform()->GetWorldPosition());
 	}
+
 }

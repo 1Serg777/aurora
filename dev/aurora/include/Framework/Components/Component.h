@@ -1,9 +1,8 @@
 #pragma once
 
-namespace aurora
-{
-	enum class ComponentType
-	{
+namespace aurora {
+
+	enum class ComponentType {
 		Transform,
 		Geometry,
 		Material
@@ -11,24 +10,21 @@ namespace aurora
 
 	class Actor;
 
-	class Component
-	{
+	class Component {
 	public:
-
 		ComponentType GetComponentType() const;
 
 		void AttachParentActor(Actor* actor);
 		void DetachParentActor();
 
 	protected:
-
 		Component(ComponentType componentType);
 		~Component() = default;
 
-		Actor* parentActor{ nullptr };
+		Actor* parentActor{nullptr};
 
 	private:
-
 		ComponentType componentType{};
 	};
+
 }

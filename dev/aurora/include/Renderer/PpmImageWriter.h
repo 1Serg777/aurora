@@ -9,42 +9,33 @@
 #include <string_view>
 #include <type_traits>
 
-namespace aurora
-{
-	enum class PpmImageFormat
-	{
+namespace aurora {
+
+	enum class PpmImageFormat {
 		ASCII,
 		BINARY
 	};
 
-	struct PpmImageProps
-	{
-		uint32_t maxColorValue{ 255 };
-		PpmImageFormat ppmImageFormat{ PpmImageFormat::ASCII };
+	struct PpmImageProps {
+		uint32_t maxColorValue{255};
+		PpmImageFormat ppmImageFormat{PpmImageFormat::ASCII};
 	};
 
-	class PpmImageWriter
-	{
+	class PpmImageWriter {
 	public:
-
 		PpmImageWriter(const PpmImageProps& ppmProps);
+		PpmImageWriter(const PpmImageProps& ppmProps, std::string_view fileName);
 		virtual ~PpmImageWriter() = default;
 
 		template<
 			typename PixelBufferType,
 			std::enable_if_t<std::is_integral_v<typename PixelBufferType::pixel_channel_type>, bool> = true>
-		void WritePixels(const PixelBufferType& pixelBuffer)
-		{
+		void WritePixels(const PixelBufferType& pixelBuffer) {
 			// Integer pixels
-
 			std::ofstream file = CreateOpenImageFile();
-
 			WriteImageHeader(file, pixelBuffer.GetWidth(), pixelBuffer.GetHeight());
-
-			for (uint32_t y = 0; y < pixelBuffer.GetHeight(); y++)
-			{
-				for (uint32_t x = 0; x < pixelBuffer.GetWidth(); x++)
-				{
+			for (uint32_t y = 0; y < pixelBuffer.GetHeight(); y++) {
+				for (uint32_t x = 0; x < pixelBuffer.GetWidth(); x++) {
 					WriteIntegerPixel(file, pixelBuffer.GetPixelValue(x, y));
 				}
 			}
@@ -53,19 +44,13 @@ namespace aurora
 		template<
 			typename PixelBufferType,
 			std::enable_if_t<std::is_floating_point_v<typename PixelBufferType::pixel_channel_type>, bool> = true>
-		void WritePixels(const PixelBufferType& pixelBuffer)
-		{
+		void WritePixels(const PixelBufferType& pixelBuffer) {
 			// Floating point pixels
-
 			std::ofstream file = CreateOpenImageFile();
-
 			WriteImageHeader(file, pixelBuffer.GetWidth(), pixelBuffer.GetHeight());
-
-			for (uint32_t y = 0; y < pixelBuffer.GetHeight(); y++)
-			{
-				for (uint32_t x = 0; x < pixelBuffer.GetWidth(); x++)
-				{
-					WriteFloatPixel(file, numa::dVec3{ pixelBuffer.GetPixelValue(x, y) });
+			for (uint32_t y = 0; y < pixelBuffer.GetHeight(); y++) {
+				for (uint32_t x = 0; x < pixelBuffer.GetWidth(); x++) {
+					WriteFloatPixel(file, pixelBuffer.GetPixelValue(x, y));
 				}
 			}
 		}
@@ -73,49 +58,43 @@ namespace aurora
 		void ChangeFileName(std::string_view fileName);
 
 	protected:
-
 		virtual std::ofstream CreateOpenImageFile() = 0;
 
-		virtual void WriteIntegerPixel(std::ostream& os, const numa::i64Vec3& pixel) = 0;
+		virtual void WriteIntegerPixel(std::ostream& os, const numa::u64Vec3& pixel) = 0;
 		virtual void WriteFloatPixel(std::ostream& os, const numa::dVec3& pixel) = 0;
 
 		void WriteImageHeader(std::ostream& os, uint32_t imageWidth, uint32_t imageHeight) const;
-
 		std::string_view GetImageFormatMagicNumber() const;
 
 		std::string fileName;
 		PpmImageProps ppmProps{};
 	};
 
-	class PpmAsciiImageWriter : public PpmImageWriter
-	{
+	class PpmAsciiImageWriter : public PpmImageWriter {
 	public:
-
 		PpmAsciiImageWriter(const PpmImageProps& ppmProps);
+		PpmAsciiImageWriter(const PpmImageProps& ppmProps, std::string_view fileName);
 		virtual ~PpmAsciiImageWriter() = default;
 
 	protected:
-
 		std::ofstream CreateOpenImageFile() override;
 
-		void WriteIntegerPixel(std::ostream& os, const numa::i64Vec3& pixel) override;
+		void WriteIntegerPixel(std::ostream& os, const numa::u64Vec3& pixel) override;
 		void WriteFloatPixel(std::ostream& os, const numa::dVec3& pixel) override;
 	};
 
-	class PpmBinaryImageWriter : public PpmImageWriter
-	{
+	class PpmBinaryImageWriter : public PpmImageWriter {
 	public:
-
 		PpmBinaryImageWriter(const PpmImageProps& ppmProps);
+		PpmBinaryImageWriter(const PpmImageProps& ppmProps, std::string_view fileName);
 		virtual ~PpmBinaryImageWriter() = default;
 
 	protected:
-
 		std::ofstream CreateOpenImageFile() override;
 
-		void WriteIntegerPixel(std::ostream& os, const numa::i64Vec3& pixel) override;
+		void WriteIntegerPixel(std::ostream& os, const numa::u64Vec3& pixel) override;
 		void WriteFloatPixel(std::ostream& os, const numa::dVec3& pixel) override;
-
-		void WriteBinaryPixel(std::ostream& os, const numa::i64Vec3& pixel);
+		void WriteBinaryPixel(std::ostream& os, const numa::u64Vec3& pixel);
 	};
+
 }

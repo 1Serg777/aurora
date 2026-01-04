@@ -2,14 +2,12 @@
 
 #include "Framework/Components/Material.h"
 
-#include "Vec3.hpp"
+#include "Vec.hpp"
 
-namespace aurora
-{
-	class ParticipatingMedium : public Material
-	{
+namespace aurora {
+
+	class ParticipatingMedium : public Material {
 	public:
-
 		ParticipatingMedium();
 		ParticipatingMedium(const numa::Vec3& mediumColor, float sigma_a, float sigma_s);
 
@@ -26,12 +24,10 @@ namespace aurora
 		float GetExitanceCoefficient() const;
 
 	private:
-
-		numa::Vec3 mediumColor{ 0.8f };
-
-		float sigma_a{ 0.0f };
-		float sigma_s{ 0.0f };
-
-		float assymetryFactor{ 0.0f };
+		numa::Vec3 mediumColor{0.8f};
+		float sigma_a{0.0f};
+		float sigma_s{0.0f};
+		float assymetryFactor{0.0f};
 	};
+
 }

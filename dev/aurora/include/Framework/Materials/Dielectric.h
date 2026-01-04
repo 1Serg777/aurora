@@ -2,7 +2,7 @@
 
 #include "Framework/Components/Material.h"
 
-#include "Vec3.hpp"
+#include "Vec.hpp"
 
 #include <utility>
 

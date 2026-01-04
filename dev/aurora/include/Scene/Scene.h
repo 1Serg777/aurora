@@ -6,23 +6,25 @@
 #include "Framework/Light.h"
 
 #include "Ray.h"
-#include "Vec3.hpp"
+#include "Vec.hpp"
 
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
-namespace aurora
-{
-	class Scene
-	{
-	public:
+namespace aurora {
 
+	struct RayHitOptions {
+		// TODO
+	};
+
+	class Scene {
+	public:
 		Scene(std::string_view sceneName);
 
 		bool IntersectClosest(const numa::Ray& ray, ActorRayHit& rayHit) const;
-		bool IntersectLights(const numa::Vec3& p, LightSampleBundle& lightBundle);
+		bool IntersectLights(const numa::Vec3& p, LightSampleBundle& lightBundle) const;
 
 		void AddActor(std::shared_ptr<Actor> actor);
 		void AddLight(std::shared_ptr<DirectionalLight> light);
@@ -40,7 +42,6 @@ namespace aurora
 		const std::string& GetSceneName() const;
 
 	private:
-
 		std::string sceneName;
 
 		std::vector<std::shared_ptr<Actor>> actors;
@@ -48,7 +49,7 @@ namespace aurora
 		
 		std::shared_ptr<Atmosphere> atmosphere;
 		std::shared_ptr<Camera> camera;
-
-		DirectionalLight* dirLight{ nullptr };
+		DirectionalLight* dirLight{nullptr};
 	};
+
 }	

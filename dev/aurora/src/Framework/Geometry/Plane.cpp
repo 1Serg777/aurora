@@ -4,32 +4,27 @@
 
 #include "Intersect.h"
 
-namespace aurora
-{
+namespace aurora {
+
 	Plane::Plane()
-		: Geometry(GeometryType::Plane)
-	{
+		: Geometry(GeometryType::Plane) {
 	}
 
-	bool Plane::Intersect(const numa::Ray& ray, GeometryRayHit& geometryHit)
-	{
+	bool Plane::Intersect(const numa::Ray& ray, GeometryRayHit& geometryHit) {
 		geometryHit.hitRay = ray;
 
-		numa::Vec3 planeNormal{ 0.0f, 1.0f, 0.0f }; // Should be retrieved from the transform's orientation matrix!
+		numa::Vec3 planeNormal{0.0f, 1.0f, 0.0f}; // Should be retrieved from the transform's orientation matrix!
 		numa::Vec3 planeOrigin = parentActor->GetTransform()->GetWorldPosition();
 
-		numa::Plane plane{ planeNormal, planeOrigin };
+		numa::Plane plane{planeNormal, planeOrigin};
 		numa::RayPlaneHit rayPlaneHit{};
 		bool hit = IntersectPlane(plane, ray, rayPlaneHit);
 
 		geometryHit.hit = hit;
 
-		if (rayPlaneHit.HitBehind())
-		{
+		if (rayPlaneHit.HitBehind()) {
 			geometryHit.hit = false;
-		}
-		else /* if (rayPlaneHit.HitInFront()) */
-		{
+		} else /* if (rayPlaneHit.HitInFront()) */ {
 			geometryHit.hitPoint = rayPlaneHit.hitPoint;
 			geometryHit.hitNormal = rayPlaneHit.hitNormal;
 			geometryHit.hitUv = rayPlaneHit.hitUv;
@@ -38,7 +33,7 @@ namespace aurora
 			geometryHit.hitFrontFace = rayPlaneHit.hitFrontFace;
 			geometryHit.hitGeometryType = GeometryType::Plane;
 		}
-
 		return geometryHit.hit;
 	}
+
 }
