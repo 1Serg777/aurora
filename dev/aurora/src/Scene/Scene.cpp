@@ -45,7 +45,7 @@ namespace aurora {
 			};
 			// Find if there's anything blocking the the path
 			float distanceToLight = numa::Length(lightSample.pos - p);
-			bool blocking{ false };
+			bool blocking{false};
 			for (auto& actor : actors) {
 				ActorRayHit hit{};
 				if (actor->Intersect(lightRay, hit)) {

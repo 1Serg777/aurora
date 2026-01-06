@@ -18,9 +18,9 @@
 #include <iostream>
 #include <iomanip>
 
-namespace aurora
-{
-	static constexpr float bias{ 0.00001f };
+namespace aurora {
+
+	static constexpr float bias{0.00001f};
 
 	void PathTracer::InitializePixelBuffer(uint32_t width, uint32_t height)
 	{
@@ -56,39 +56,28 @@ namespace aurora
 		}
 	}
 
-	void PathTracer::RenderPixels(const ImageRegion& renderRegion, const Scene& scene)
-	{
-		for (uint32_t y = renderRegion.raster_y_start; y < renderRegion.raster_y_end; y++)
-		{
-			for (uint32_t x = renderRegion.raster_x_start; x < renderRegion.raster_x_end; x++)
-			{
+	void PathTracer::RenderPixels(const ImageRegion& renderRegion, const Scene& scene) {
+		for (uint32_t y = renderRegion.raster_y_start; y < renderRegion.raster_y_end; y++) {
+			for (uint32_t x = renderRegion.raster_x_start; x < renderRegion.raster_x_end; x++) {
 				RenderPixel(x, y, scene);
 			}
 		}
 	}
-	void PathTracer::RenderPixel(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene)
-	{
+	void PathTracer::RenderPixel(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene) {
 		Camera* sceneCamera = scene.GetCamera();
-
-		int rayDepth{ 0 };
-		numa::Vec3 pixelColor{ 0.0f };
-
-		if (sampleCount > 1)
-		{
-			for (int sample = 0; sample < sampleCount; sample++)
-			{
+		int rayDepth{0};
+		numa::Vec3 pixelColor{0.0f};
+		if (sampleCount > 1) {
+			for (int sample = 0; sample < sampleCount; sample++) {
 				numa::Ray ray = sceneCamera->GenerateCameraRayJittered(raster_coord_x, raster_coord_y);
 				pixelColor += ComputeColor(ray, scene, rayDepth);
 			}
 			float scaleFactor = 1.0f / sampleCount;
 			pixelColor *= scaleFactor;
-		}
-		else
-		{
+		} else {
 			numa::Ray ray = sceneCamera->GenerateCameraRayJittered(raster_coord_x, raster_coord_y);
 			pixelColor = ComputeColor(ray, scene, rayDepth);
 		}
-
 		pixelBuffer->WritePixel(raster_coord_x, raster_coord_y, pixelColor);
 	}
 
@@ -182,47 +171,33 @@ namespace aurora
 		}
 	}
 
-	numa::Vec3 PathTracer::BackgroundColor(const numa::Ray& ray)
-	{
+	numa::Vec3 PathTracer::BackgroundColor(const numa::Ray& ray) {
 		Gradient skyGradient{
-				numa::Vec3{ 1.0f, 1.0f, 1.0f },
-				numa::Vec3{ 0.5f, 0.7f, 1.0f },
+				numa::Vec3{1.0f, 1.0f, 1.0f},
+				numa::Vec3{0.5f, 0.7f, 1.0f},
 		};
-
 		float t = ray.GetDirection().y * 0.5f + 0.5f;
 		numa::Vec3 bgColor = skyGradient.GetColor(t);
-
 		return bgColor;
 	}
 
-	numa::Vec3 PathTracer::ComputeColor(const numa::Ray& ray, const Scene& scene, int rayDepth)
-	{
-		numa::Vec3 pixelColor{ 0.0f, 0.0f, 0.0f };
-
+	numa::Vec3 PathTracer::ComputeColor(const numa::Ray& ray, const Scene& scene, int rayDepth) {
+		numa::Vec3 pixelColor{0.0f, 0.0f, 0.0f};
 		if (rayDepth > rayDepthLimit)
-			return numa::Vec3{ 0.0f, 0.0f, 0.0f };
-
+			return numa::Vec3{0.0f, 0.0f, 0.0f};
 		ActorRayHit rayHit{};
-		if (scene.IntersectClosest(ray, rayHit) && rayHit.hitActor)
-		{
+		if (scene.IntersectClosest(ray, rayHit) && rayHit.hitActor) {
 			// Hit something, use this object's color
-
 			if (rayHit.hitActor->HasMaterial())
 				pixelColor = ShadeMaterial(rayHit, scene, rayDepth);
-		}
-		else
-		{
+		} else {
 			// Missed, use the background color
 			// or the atmosphere color if the scene has one.
-
 			Atmosphere* atmosphere = scene.GetAtmosphere();
 			DirectionalLight* dirLight = scene.GetDirectionalLight();
-			if (atmosphere && dirLight)
-			{
+			if (atmosphere && dirLight) {
 				pixelColor = atmosphere->ComputeSkyColor(ray, dirLight);
-			}
-			else
-			{
+			} else {
 				pixelColor = BackgroundColor(ray);
 			}
 		}
@@ -691,13 +666,11 @@ namespace aurora
 	// SceneRenderingJob class
 
 	SceneRenderingJob::SceneRenderingJob(PathTracer* pathTracer, Scene* scene)
-		: pathTracer(pathTracer), scene(scene)
-	{
+		: pathTracer(pathTracer), scene(scene) {
 		InitializeRenderingTasks();
 	}
 
-	void SceneRenderingJob::OnStart()
-	{
+	void SceneRenderingJob::OnStart() {
 		Job::OnStart();
 
 		Camera* camera = scene->GetCamera();
@@ -707,89 +680,66 @@ namespace aurora
 
 		std::clog << "Rendering scene '" << scene->GetSceneName() << "'...\n";
 	}
-	void SceneRenderingJob::OnEnd()
-	{
+	void SceneRenderingJob::OnEnd() {
 		Job::OnEnd();
-
 		std::clog << "\nDone rendering scene! Tasks finished: " << tasksDone << " out of " << tasksToDo << "\n";
 	}
 
-	bool SceneRenderingJob::DoWork()
-	{
+	bool SceneRenderingJob::DoWork() {
 		// Acquire rendering task
-
 		SceneRenderingTask renderingTask{};
-		if (!AcquireRenderingTask(renderingTask))
-		{
+		if (!AcquireRenderingTask(renderingTask)) {
 			return false;
 		}
-
 		// Do the work
-
 		ImageRegion renderRegion{};
 		renderRegion.raster_x_start = renderingTask.raster_x_start;
 		renderRegion.raster_x_end = renderingTask.raster_x_end;
 		renderRegion.raster_y_start = renderingTask.raster_y_start;
 		renderRegion.raster_y_end = renderingTask.raster_y_end;
-
 		pathTracer->RenderPixels(renderRegion, *scene);
 
 		NotifyRenderingTaskFinished(renderingTask);
-
 		return true;
 	}
 
-	bool SceneRenderingJob::AcquireRenderingTask(SceneRenderingTask& renderingTask)
-	{
-		std::lock_guard<std::mutex> lock{ renderingTaskMutex };
-
+	bool SceneRenderingJob::AcquireRenderingTask(SceneRenderingTask& renderingTask) {
+		std::lock_guard<std::mutex> lock{renderingTaskMutex};
 		if (renderingTasks.empty())
 			return false;
-
 		renderingTask = renderingTasks.top();
 		renderingTasks.pop();
-
 		return true;
 	}
 
-	void SceneRenderingJob::NotifyRenderingTaskFinished(const SceneRenderingTask& renderingTask)
-	{
-		std::lock_guard<std::mutex> lockNotification{ notificationMutex };
+	void SceneRenderingJob::NotifyRenderingTaskFinished(const SceneRenderingTask& renderingTask) {
+		std::lock_guard<std::mutex> lockNotification{notificationMutex};
 
 		size_t pixelsRendered_x = static_cast<size_t>(renderingTask.raster_x_end) - renderingTask.raster_x_start;
 		size_t pixelsRendered_y = static_cast<size_t>(renderingTask.raster_y_end) - renderingTask.raster_y_start;
 		size_t pixelsRendered = pixelsRendered_x * pixelsRendered_y;
 
 		size_t renderingJobPixels = static_cast<size_t>(this->imageWidth) * this->imageHeight;
-
 		float taskPercentage = static_cast<float>(pixelsRendered) / renderingJobPixels;
-
 		donePercentage += taskPercentage;
-
 		std::clog << "\rProgress: " << std::setprecision(3) << donePercentage * 100.0f << "%   ";
 
-		std::lock_guard<std::mutex> lockTask{ renderingTaskMutex };
-
+		std::lock_guard<std::mutex> lockTask{renderingTaskMutex};
 		// if (renderingTasks.empty())
 			// End();
-
 		tasksDone++;
-
 		if (tasksDone == tasksToDo)
 			End();
 	}
 
-	void SceneRenderingJob::InitializeRenderingTasks()
-	{
-		std::lock_guard<std::mutex> lock{ renderingTaskMutex };
+	void SceneRenderingJob::InitializeRenderingTasks() {
+		std::lock_guard<std::mutex> lock{renderingTaskMutex};
 
 		Camera* camera = scene->GetCamera();
-
 		this->imageWidth = camera->GetCameraResolution_X();
 		this->imageHeight = camera->GetCameraResolution_Y();
 
 		// 1. Line Rendering Tasks
-
 		this->lineCount = 10; // 108 tasks for 1080 lines
 		CreateLineRenderingTasks(imageWidth, imageHeight, lineCount);
 

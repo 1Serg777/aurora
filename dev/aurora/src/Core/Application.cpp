@@ -155,17 +155,23 @@ namespace aurora {
 
 		// Camera
 
-		// 1920 x 1080
+		// (ar = 16:9)
+		// 1920 x 1080 
 		// 1280 x 720
 		// 1024 × 576
 		// 
+		// (ar = 4:3)
 		// 800 x 600
 		// 400 x 240
 
-		uint32_t cameraWidth{ 800 };
-		uint32_t cameraHeight{ 600 };
-		float fov_y_deg{ 90.0f };
-		std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight, fov_y_deg);
+		uint32_t cameraWidth{800};
+		uint32_t cameraHeight{600};
+		float fov_y_deg{90.0f};
+		float fov_x_deg{106.0f};
+		// std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight,
+		//                                                           FovType::VERTICAL, fov_y_deg);
+		std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight,
+			                                                      FovType::HORIZONTAL, fov_x_deg);
 		camera->SetTransform(cameraTransform);
 
 		// Actors
@@ -206,8 +212,8 @@ namespace aurora {
 		lambertianPlaneActor->SetMaterial(lambertianPlaneMaterial);
 		// lambertianPlaneActor->SetMaterial(fuzzyMetalSphereMaterial); // TEST!
 
-		numa::Vec3 dirLightCol{ 1.0f, 1.0f, 1.0f };
-		float dirLightStrength{ 25.0f };
+		numa::Vec3 dirLightCol{1.0f, 1.0f, 1.0f};
+		float dirLightStrength{25.0f};
 
 		std::shared_ptr<DirectionalLight> dirLightActor = std::make_shared<DirectionalLight>(
 			"Directional Light", dirLightCol, dirLightStrength);
@@ -218,15 +224,15 @@ namespace aurora {
 
 		AtmosphereData atmosphereData{
 			RayleighScatteringData{
-				// numa::Vec3 { 5.8e-6, 13.5e-6, 33.1e-6 }, // betaR0
-				numa::Vec3 { 3.8e-6, 13.5e-6, 33.1e-6 }, // betaR0
-				// float { 8000 }, // HR
-				float { 7994 }, // HR
+				// numa::Vec3{5.8e-6, 13.5e-6, 33.1e-6}, // betaR0
+				numa::Vec3{3.8e-6, 13.5e-6, 33.1e-6}, // betaR0
+				// float{8000}, // HR
+				float{7994}, // HR
 			},
 			MieScatteringData{
-				float { 21e-6f }, // betaM0
-				float { 1200 }, // HM
-				float { 0.76f }, // mie_phase_g
+				float{21e-6f}, // betaM0
+				float{1200}, // HM
+				float{0.76f}, // mie_phase_g
 			},
 			636e4, // Ground sphere radius
 			642e4, // Atmosphere sphere radius
@@ -252,7 +258,7 @@ namespace aurora {
 	}
 
 	void Application::RenderActiveScene(std::shared_ptr<Scene> scene) {
-		// 1. Render the scene
+		// 1. Create rendering jobs.
 		CreateSceneRenderingJob(scene);
 		taskManager->ExecuteAllJobs();
 		// 2. Tone mapping and gamma correction
@@ -268,26 +274,10 @@ namespace aurora {
 		imageWriter->ChangeFileName(filePath.generic_string().c_str());
 		imageWriter->WritePixels(*pathTracer->GetPixelBuffer());
 	}
-
-	void Application::CreateSceneRenderingJob(std::shared_ptr<Scene> scene)
-	{
+	void Application::CreateSceneRenderingJob(std::shared_ptr<Scene> scene) {
 		std::shared_ptr<SceneRenderingJob> sceneRenderingJob =
-			std::make_unique<SceneRenderingJob>(
-				pathTracer.get(), scene.get());
-
+			std::make_unique<SceneRenderingJob>(pathTracer.get(), scene.get());
 		taskManager->AddJob(sceneRenderingJob);
-	}
-
-	void Application::RenderScene(std::shared_ptr<Scene> scene)
-	{
-		std::string fileName{ scene->GetSceneName() };
-		fileName.append(".ppm");
-
-		std::filesystem::path filePath = exePath / fileName;
-
-		imageWriter->ChangeFileName(filePath.generic_string().c_str());
-		pathTracer->RenderScene(scene);
-		imageWriter->WritePixels(*pathTracer->GetPixelBuffer());
 	}
 
 }

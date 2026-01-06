@@ -2,14 +2,13 @@
 
 #include "Renderer/PixelBuffer.h"
 
-#include "Framework/Actor.h"
+#include "Core/TaskManager.h"
 
+#include "Framework/Actor.h"
 #include "Framework/Materials/Dielectric.h"
 #include "Framework/Materials/Lambertian.h"
 #include "Framework/Materials/Metal.h"
 #include "Framework/Materials/ParticipatingMedium.h"
-
-#include "Core/TaskManager.h"
 
 #include "Scene/Scene.h"
 
@@ -19,20 +18,17 @@
 #include <cstdint>
 #include <memory>
 
-namespace aurora
-{
-	struct ImageRegion
-	{
-		uint32_t raster_x_start{ 0 };
-		uint32_t raster_x_end{ 0 };
-		uint32_t raster_y_start{ 0 };
-		uint32_t raster_y_end{ 0 };
+namespace aurora {
+
+	struct ImageRegion {
+		uint32_t raster_x_start{0};
+		uint32_t raster_x_end{0};
+		uint32_t raster_y_start{0};
+		uint32_t raster_y_end{0};
 	};
 
-	class PathTracer
-	{
+	class PathTracer {
 	public:
-
 		void InitializePixelBuffer(uint32_t width, uint32_t height);
 		void ClearPixelBuffer(const numa::Vec3& clearColor);
 
@@ -53,7 +49,6 @@ namespace aurora
 		const f32PixelBuffer* GetPixelBuffer() const;
 
 	private:
-
 		numa::Vec3 BackgroundColor(const numa::Ray& ray);
 
 		numa::Vec3 ComputeColor(const numa::Ray& ray, const Scene& scene, int rayDepth);
@@ -66,35 +61,30 @@ namespace aurora
 
 		std::shared_ptr<f32PixelBuffer> pixelBuffer;
 
-		int rayDepthLimit{ 5 };
+		int rayDepthLimit{5};
+		int sampleCount{50};
+		// int sampleCount{25};
+		// int sampleCount{15};
+		// int sampleCount{10};
+		// int sampleCount{5};
+		// int sampleCount{1};
 
-		int sampleCount{ 50 };
-		// int sampleCount{ 25 };
-		// int sampleCount{ 15 };
-		// int sampleCount{ 10 };
-		// int sampleCount{ 5 };
-		// int sampleCount{ 1 };
-
-		bool multisampling{ false };
+		bool multisampling{false};
 	};
 
-	struct RenderingTask : Task
-	{
+	struct RenderingTask : Task {
 		// TODO
 	};
 
-	struct SceneRenderingTask : RenderingTask
-	{
-		uint32_t raster_x_start{ 0 };
-		uint32_t raster_x_end{ 0 };
-		uint32_t raster_y_start{ 0 };
-		uint32_t raster_y_end{ 0 };
+	struct SceneRenderingTask : RenderingTask {
+		uint32_t raster_x_start{0};
+		uint32_t raster_x_end{0};
+		uint32_t raster_y_start{0};
+		uint32_t raster_y_end{0};
 	};
 
-	class SceneRenderingJob : public Job
-	{
+	class SceneRenderingJob : public Job {
 	public:
-
 		SceneRenderingJob(PathTracer* pathTracer, Scene* scene);
 		virtual ~SceneRenderingJob() = default;
 
@@ -111,7 +101,6 @@ namespace aurora
 		Scene* scene{ nullptr };
 
 	private:
-
 		void InitializeRenderingTasks();
 
 		void CreateLineRenderingTasks(uint32_t width, uint32_t height, uint32_t lineCount);
@@ -133,4 +122,5 @@ namespace aurora
 		uint32_t imageWidth{};
 		uint32_t imageHeight{};
 	};
+
 }

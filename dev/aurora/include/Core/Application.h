@@ -38,8 +38,6 @@ namespace aurora {
 		void RenderActiveScene(std::shared_ptr<Scene> scene);
 		void CreateSceneRenderingJob(std::shared_ptr<Scene> scene);
 
-		void RenderScene(std::shared_ptr<Scene> scene);
-
 		std::filesystem::path exePath{};
 
 		std::unique_ptr<PathTracer> pathTracer;
