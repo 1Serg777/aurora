@@ -81,20 +81,14 @@ namespace aurora {
 		pixelBuffer->WritePixel(raster_coord_x, raster_coord_y, pixelColor);
 	}
 
-	void PathTracer::ToneMapReinhardtRGB()
-	{
+	void PathTracer::ToneMapReinhardtRGB() {
 		uint32_t resolution_x = pixelBuffer->GetWidth();
 		uint32_t resolution_y = pixelBuffer->GetHeight();
-
 		// Normalize pixel values
-
-		for (uint32_t y = 0; y < resolution_y; y++)
-		{
-			for (uint32_t x = 0; x < resolution_x; x++)
-			{
+		for (uint32_t y = 0; y < resolution_y; y++) {
+			for (uint32_t x = 0; x < resolution_x; x++) {
 				numa::Vec3& radiance = pixelBuffer->GetPixelValue(x, y);
-
-				radiance = radiance / (numa::Vec3{ 1.0f } + radiance);
+				radiance = radiance / (numa::Vec3{1.0f} + radiance);
 			}
 		}
 	}
@@ -400,133 +394,101 @@ namespace aurora {
 
 		return color;
 	}
-	numa::Vec3 PathTracer::ShadeParticipatingMedium(const ActorRayHit& rayHit, const Scene& scene, const ParticipatingMedium* medium, int rayDepth)
-	{
+	numa::Vec3 PathTracer::ShadeParticipatingMedium(const ActorRayHit& rayHit, const Scene& scene, const ParticipatingMedium* medium, int rayDepth) {
 		// Biases and other utilities.
-		// Try using values that are multiples of the `bias` static variable, such as  1e2 * bias; 1e5 * bias;
-
-		float volumeRayBias{ bias };
-
-		float trimPathDistance{ bias };
-		float acceptedPathDistanceThreshold{ bias };
-
-		float singleSegmentDistanceThreshold{ 1e3f * bias };
+		// Try using values that are multiples of the 'bias' static variable, such as  1e2 * bias; 1e5 * bias;
+		// It's easier to alter just the single 'bias' variable to make sure that all the other biases are updated too.
+		// In case something needs a different approach, think about where else it could be used and see if it makes
+		// sense to declare it as a static variable at the top of the file.
+		float volumeRayBias{bias};
+		float trimPathLength{bias};
+		float acceptedPathLengthThreshold{bias};
+		float segmentPathLengthThreshold{1e3f * bias};
 
 		// 1. Handle the ray inside the medium
 		//    Assume that there's no nested objects inside the volume,
 		//    so we can directly figure out the exit point without
 		//    having to check every actor in the scene.
-		// 
 		//    [TODO]
-		//    At some point later on, I should probably figure out a way
-		//    to relax that assumption.
-
+		//    At some point later on, I should probably figure out a way to relax that assumption.
 		numa::Ray volumeCameraRay{
-			numa::Vec3{ rayHit.hitPoint - volumeRayBias * rayHit.hitNormal },
-			numa::Vec3{ rayHit.hitRay.GetDirection() }
+			numa::Vec3{rayHit.hitPoint - volumeRayBias * rayHit.hitNormal},
+			numa::Vec3{rayHit.hitRay.GetDirection()}
 		};
-
 		Actor* volumeActor = rayHit.hitActor;
-
 		ActorRayHit camRayExitPointHit{};
 		bool camRayExitPointHitCheck = volumeActor->Intersect(volumeCameraRay, camRayExitPointHit);
-
 		// Prune (trim) the distance traveled to avoid potential situations where
-		// 't_prime' can go outside the volume. But be careful doing so, because
-		// if the distance is smaller than the bias we may end up with a negative distance travelled as a result, so
-		// that should be appropriately taken into account.
-
-		float camRayPathDistance = camRayExitPointHit.hitDistance - trimPathDistance;
-
-		if (!camRayExitPointHitCheck || camRayPathDistance <= acceptedPathDistanceThreshold)
-		{
+		// the point along the camera ray can go outside the volume.
+		// The segment length must not be smaller than the bias.
+		float camRayPathLength = camRayExitPointHit.hitDistance - trimPathLength;
+		if (!camRayExitPointHitCheck || camRayPathLength <= acceptedPathLengthThreshold) {
 			// Intersection is considered tangent to the volume shape.
-
 			numa::Ray behindVolumeRay{
-				numa::Vec3{ camRayExitPointHit.hitPoint + volumeRayBias * camRayExitPointHit.hitNormal },
-				numa::Vec3{ camRayExitPointHit.hitRay.GetDirection() }
+				numa::Vec3{camRayExitPointHit.hitPoint + volumeRayBias * camRayExitPointHit.hitNormal},
+				numa::Vec3{camRayExitPointHit.hitRay.GetDirection()}
 			};
-
 			return ComputeColor(behindVolumeRay, scene, rayDepth);
 		}
 
-		// [TODO] need to think about relaxing this assumption
-		assert(rayHit.hitActor == camRayExitPointHit.hitActor && "The volume must not have any nested objects!");
+		// [TODO]: again, need to think about relaxing the assumption that there are no actors inside the volume.
+		assert(rayHit.hitActor == camRayExitPointHit.hitActor && "Nested actors are not supported yet!");
 
 		// 2. Now we can start integration.
 		//    There are generally two ways to integrate the equation
 		//    1) From the camera ray side where the radiance exits the volume
 		//    2) From the point where the radiance enters the volume
-		//    You're free to pick whatever's easier for you, but there are a couple of benefits
-		//    to using the first approach.
+		//    You're free to pick whatever's easier for you, but there are a couple of benefits to using the first approach.
 		//    For the sake of learning, I will try to implement both approaches here.
-		//    [TODO] The second approach.
-
-		float Tr{ 1.0f };
-
+		//    [TODO]: implement the second approach as promised.
+		float Tr{1.0f}; // Transmittance, or decay rate.
 		uint32_t segments = 16;
-		float t = camRayPathDistance;
+		float t = camRayPathLength;
 		float dt = t / segments;
-
-		if (camRayPathDistance <= singleSegmentDistanceThreshold)
-		{
+		if (camRayPathLength <= segmentPathLengthThreshold) {
 			segments = 1;
 			dt = t;
-
-			// static int count{ 0 };
+			// static int count{0};
 			// std::cout << ++count << ") " << "Single segment camera ray path distance detected: " << t << "\n";
 		}
-
-		// 2.1 Integrating from the camera ray direction. The side closest to the camera ray.
-
+		// 2.1 Integrating from the camera ray direction, the side closest to the camera ray.
 		numa::Vec3 wo = -rayHit.hitRay.GetDirection();
-		numa::Vec3 Lo{ 0.0f };
-		for (uint32_t segment = 0; segment < segments; segment++)
-		{
+		numa::Vec3 Lo{0.0f}; // outgoing radiance (LO)
+		for (uint32_t segment = 0; segment < segments; segment++) {
 			// Move to the next segment and add some jitter within it.
-
 			float t_prime_jitter = 0.5f * dt; // or 't_shift'; could make the jitter random within 'dt'
 			float t_prime = segment * dt + t_prime_jitter; // or 'segment_t'
-
 			// Find the point corresponding to 't_prime'
-
 			numa::Vec3 p_prime = volumeCameraRay.GetPoint(t_prime); // 'segment_p'
-
-			// Calculate the segment transmittance as well as the transmittance from 'p_prime' to 'p'
-			// where 'p' is where the camera ray entered the volume.
-
+			// Calculate the segment transmittance and add this value to
+			// the transmittance from 'p_prime' to 'p', where 'p' is the point where the camera ray entered the volume.
+			// By the way, that's the benefit of integrating from the point closest to the camera.
+			// By the end of the integration process we're going to have the transmittance value 'Tr',
+			// which we'll apply to the background color, L0.
 			float segment_Tr = medium->ComputeTransmittance(p_prime, dt);
 			Tr *= segment_Tr;
-
-			// Compute the in scattering contribution
-
-			numa::Vec3 Ls{ 0.0f };
-			for (auto& light : scene.GetLights())
-			{
-				// Sample the light retrieving all the necessary information we need about it.
-				// This includes light direction 'wi', radiance 'Li', and position 'p'.
-
+			// Compute the in scattering contribution from all the scene's lights.
+			numa::Vec3 Ls{0.0f};
+			for (auto& light : scene.GetLights()) {
+				// Sample the light, retrieving all the necessary information we need about it.
+				// This includes light direction 'wi', radiance 'Li', and light's position 'p'.
 				LightSampleData lightSampleData{};
 				light->Sample(p_prime, lightSampleData);
-
 				// Now we need to make sure that there's nothing in our way to reach the light.
 				// Again, the assumption is that there's nothing inside the volume, thus
 				// the only objects obstructing the view can be outside the medium.
-
+				// [TODO]: when this restriction is relaxed, don't forget to alter the algorithm here.
 				numa::Ray lightRay{
 					p_prime,
-					lightSampleData.wi
+					lightSampleData.wi // points toward the light source
 				};
-
 				// Now we want to figure out where the radiance from the light source enters the volume.
 				// The assumption is that we're definitely inside the volume and it's not the edge case,
-				// where the camera ray grazes the volume at a point. We took care of that earlier.
-
+				// where the camera ray grazes the volume. We took care of that earlier.
 				ActorRayHit lightVolumeEntryHit{};
 				bool lightVolumeEntryHitCheck = volumeActor->Intersect(lightRay, lightVolumeEntryHit);
-
 				// It looks like there are still cases where 'p_prime' ends up outside the volume.
-				// So that assumption we spoke of earlier, doesn't hold anymore.
+				// So that assumption we spoke of earlier doesn't hold anymore.
 				// In this case we should just set the `inVolumeLightDistance' to zero and
 				// 'lightEntryPoint' to be the 'p_prime' point.
 				// 
@@ -535,66 +497,47 @@ namespace aurora {
 				numa::Vec3 lightEntryPoint =
 					lightRay.GetPoint(lightVolumeEntryHit.hitDistance) +
 					volumeRayBias * lightVolumeEntryHit.hitNormal;
-
-				float volumeLightPathDistance = lightVolumeEntryHit.hitDistance - trimPathDistance;
-
-				if (!lightVolumeEntryHitCheck || volumeLightPathDistance <= acceptedPathDistanceThreshold)
-				{
+				float volumeLightPathLength = lightVolumeEntryHit.hitDistance - trimPathLength;
+				if (!lightVolumeEntryHitCheck || volumeLightPathLength <= acceptedPathLengthThreshold) {
 					// static int count{ 0 };
 					// std::cout << ++count << ") " << "Fell outside the volume! Camera ray distance: " << t << "\n";
-
 					lightEntryPoint = p_prime;
-					volumeLightPathDistance = 0.0f;
-
+					volumeLightPathLength = 0.0f;
 					// The light path distance of 0.0f also ensures that the transmittance for
 					// that single segment will be 1.0f, so no attenuation to the light radiance.
 				}
-
-				// Now when that out of the way, we want to know whether any of the objects obstructs the view
+				// Now when that out of the way, we want to know whether any of the objects obstruct the view
 				// from the light source toward the volume at the 'lightEntryPoint' point.
-
 				numa::Ray shadowRay{
 					lightEntryPoint, // the bias was applied earlier in case no intersection occurred
 					lightSampleData.wi
 				};
-
 				ActorRayHit occludingActorHit{};
 				if (scene.IntersectClosest(shadowRay, occludingActorHit))
-					continue; // something occluding the view from the light source, so we just move on to the next light
+					continue; // something is occluding the view from the light source, so we just move on to the next light
 
 				// Nothing is occluding the view from the light source,
 				// so we can compute the in scattering contribution from that particular light source.
-				// 
 				// We divide the light path into segments and figure out the transmittance
 				// over that path by integrating it from the light entry point 'lightEntryPoint',
 				// to the camera ray segment point 'p_prime'.
-
 				uint32_t light_segments = 16;
-				float light_t = volumeLightPathDistance;
+				float light_t = volumeLightPathLength;
 				float light_dt = light_t / light_segments;
-
-				if (volumeLightPathDistance <= singleSegmentDistanceThreshold)
-				{
+				if (volumeLightPathLength <= segmentPathLengthThreshold) {
 					light_segments = 1;
 					light_dt = light_t;
-
-					// static int count{ 0 };
+					// static int count{0};
 					// std::cout << ++count << ") " << "Single segment light path distance detected: " << light_t << "\n";
 				}
-
-				float light_path_Tr{ 1.0f };
-				// float light_path_tau{ 0.0f }; // light path optical thickness
-				for (uint32_t light_segment = 0; light_segment < light_segments; light_segment++)
-				{
+				float light_path_Tr{1.0f};
+				// float light_path_tau{0.0f}; // light path optical thickness
+				for (uint32_t light_segment = 0; light_segment < light_segments; light_segment++) {
 					// Move to the next light path segment and add some jitter within it.
-
 					float light_t_prime_jitter = 0.5f * light_dt; // or 'light_t_shift'; could make the jitter random within 'light_dt'
 					float light_t_prime = light_segment * light_dt + light_t_prime_jitter; // or 'light_segment_t'
-
 					// Find the point corresponding to 'light_t_prime'
-
 					numa::Vec3 light_p_prime = lightRay.GetPoint(light_t_prime); // 'segment_p'
-
 					// Since 'light_dt' value is constant for all light path segments, we can actually
 					// simplify the computation of the light path transmittance a bit.
 					// 
@@ -602,40 +545,38 @@ namespace aurora {
 					//
 					// You can see from the expression above that we can simply find a sum
 					// of the exitance coefficients at each light path segment and compute 'e to the power' only once.
-					
+					// 
 					// light_path_tau += medium->GetExitanceCoefficient();
-
+					// 
 					// However, since we don't have any variation in either the absorption coefficient 'sigma_a'
 					// or the scattering coefficient 'sigma_s', I'm just going to stick to the tried and tested
 					// method of evaluating the transmittance at every light path segment and combining the results
 					// to get the full light path transmittance.
-
 					float light_segment_Tr = medium->ComputeTransmittance(light_p_prime, light_dt);
 					light_path_Tr *= light_segment_Tr;
 				}
 				// light_path_tau *= light_dt;
 
 				float cos_theta = numa::Dot(wo, lightSampleData.wi);
-
 				// float phase_p = medium->EvaluateIsotropicPhaseFunction(cos_theta);
 				float phase_p = medium->EvaluateHenyeyGreensteinPhaseFunction(cos_theta);
 
 				numa::Vec3 Li = phase_p * (lightSampleData.Li * light_path_Tr);
 				Ls += Li;
 			}
-
-			// The reason why we need the scattering coefficient 'sigma_s' instead of the extinction coefficient 'sigma_t'
-			// is because the function 'Ls' itself features the so-called scattering albedo quantity which is just
+			// a) The reason why we need the scattering coefficient 'sigma_s' and not the extinction coefficient 'sigma_t'
+			// is because the function 'Ls' itself features the so-called 'scattering albedo' quantity which is just
 			// a ratio of 'sigma_s' over 'sigma_t'. As a result, the 'sigma_t' term in the integral
 			// eliminates the 'sigma_t' in the denominator of the scattering albedo and we end up with just 'sigma_s'.
-
+			// That's if you look at the volume rendering equation in the PBRT book.
+			// b) Another explanation, which I'm not entirely sure is correct, but one that sounds right,
+			// is in the name of the phenomenon, "in scattering". Light gets scattered in the direction of the camera ray,
+			// there's nothing said about absorption, which makes sense since absorbed light doesn't get propagated anywhere.
 			float sigma_s = medium->GetScatteringCoefficient();
-			
-			Lo += Tr * sigma_s * Ls * dt;
+			Lo += Tr * sigma_s * Ls * dt; // That's our input function contribution.
 		}
 
-		// [TODO]
-		// 2.2 Integrating from the radiance entrance direction. The side where L0 enters the volume.
+		// 2.2 Integrating from the side where L0 enters the volume.
 		// [TODO]
 
 		// 3. Handle the background or atmosphere color.
@@ -643,8 +584,8 @@ namespace aurora {
 		//    also denoted L(0) in the Equation of Transfer.
 
 		numa::Ray behindVolumeRay{
-			numa::Vec3{ camRayExitPointHit.hitPoint + bias * camRayExitPointHit.hitNormal },
-			numa::Vec3{ camRayExitPointHit.hitRay.GetDirection() }
+			numa::Vec3{camRayExitPointHit.hitPoint + bias * camRayExitPointHit.hitNormal},
+			numa::Vec3{camRayExitPointHit.hitRay.GetDirection()}
 		};
 		numa::Vec3 L0 = ComputeColor(behindVolumeRay, scene, ++rayDepth);
 

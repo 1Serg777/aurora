@@ -7,17 +7,33 @@
 
 namespace aurora {
 
+	enum class FilmFitType {
+		FILL,
+		OVERSCAN
+	};
+
 	enum class FovType {
 		VERTICAL,
 		HORIZONTAL
 	};
 
-	struct CameraSettings {
+	struct CameraProperties {
 		uint32_t resolution_x{1920};
 		uint32_t resolution_y{1080};
+		float nearPlane{0.1f};
+		float farPlane{10000.0f};
+		// 1. Physical camera properties.
+		//    What you have exposed in Maya.
+		float filmWidth{1.417}; // in inches. (multiply by 25.4 to convert to millimeters) (35.9918 mm.)
+		float filmHeight{0.945}; // in inches. (multiply by 25.4 to convert to millimeters) (24.003 mm.)
+		float focalLength{35}; // in millimeters.
+		FilmFitType filmFitType{FilmFitType::FILL};
+		// 2. Non-physical camera properties.
+		//    What game engines usually expose to the player.
 		float fov_y{90.0f};
 		float fov_x{120.0f};
 		FovType fovType{FovType::VERTICAL};
+		bool usePhysicalCamera{true};
 	};
 
 	class Camera : public Actor {
@@ -46,6 +62,8 @@ namespace aurora {
 
 		float aspect_ratio{1.0f};
 
+		float nearPlane{0.01f};
+		float farPlane{1000.0f};
 		float focal_length{1.0f};
 
 		float half_height{1.0f};

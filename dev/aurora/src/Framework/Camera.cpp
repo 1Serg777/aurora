@@ -111,11 +111,25 @@ namespace aurora {
 
 	void Camera::ComputeCameraParameters() {
 		aspect_ratio = static_cast<float>(resolution_x) / resolution_y;
+		// TEST: (1.78 is the standard I usually use)
+		// 1. Stretching
+		// aspect_ratio = 1.0f;
+		// 2. Squeezing
+		// aspect_ratio = 2.5f;
+		// aspect_ratio = 1.78f;
 		if (fovType == FovType::VERTICAL) {
-			half_height = focal_length * tanf(numa::Rad(fov_y_deg) * 0.5f);
+			// Old
+			// half_height = focal_length * tanf(numa::Rad(fov_y_deg) * 0.5f);
+			// half_width = aspect_ratio * half_height;
+			// New
+			half_height = nearPlane * tanf(numa::Rad(fov_y_deg) * 0.5f);
 			half_width = aspect_ratio * half_height;
 		} else /* if (fovType == FovType::HORIZONTAL) */ {
-			half_width = tanf(numa::Rad(fov_x_deg) * 0.5f) * focal_length;
+			// Old
+			// half_width = tanf(numa::Rad(fov_x_deg) * 0.5f) * focal_length;
+			// half_height = half_width / aspect_ratio;
+			// New
+			half_width = tanf(numa::Rad(fov_x_deg) * 0.5f) * nearPlane;
 			half_height = half_width / aspect_ratio;
 		}
 	}
@@ -129,8 +143,11 @@ namespace aurora {
 
 		float camera_space_x = x_ndc * half_width;
 		float camera_space_y = y_ndc * half_height;
-
-		numa::Vec3 pixelPosition{camera_space_x, camera_space_y, -focal_length};
+		
+		// Old
+		// numa::Vec3 pixelPosition{camera_space_x, camera_space_y, -focal_length};
+		// New
+		numa::Vec3 pixelPosition{camera_space_x, camera_space_y, -nearPlane};
 		return pixelPosition;
 	}
 
