@@ -40,6 +40,7 @@ namespace aurora {
 		bool IntersectGround(const numa::Ray& ray, ActorRayHit& rayHit) const;
 		bool IntersectAtmosphere(const numa::Ray& ray, ActorRayHit& rayHit) const;
 
+		numa::Vec3 GetSunlight(const numa::Vec3& p, DirectionalLight* sun);
 		numa::Vec3 ComputeSkyColor(const numa::Ray& ray, DirectionalLight* dirLight) const;
 
 		float RayleighPhaseFunction(float cosTheta) const;

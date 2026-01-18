@@ -97,8 +97,8 @@ namespace aurora {
 
 		void NotifyRenderingTaskFinished(const SceneRenderingTask& renderingTask);
 
-		PathTracer* pathTracer{ nullptr };
-		Scene* scene{ nullptr };
+		PathTracer* pathTracer{nullptr};
+		Scene* scene{nullptr};
 
 	private:
 		void InitializeRenderingTasks();

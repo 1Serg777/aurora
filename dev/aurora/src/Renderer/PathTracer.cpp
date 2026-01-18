@@ -199,53 +199,40 @@ namespace aurora {
 		return pixelColor;
 	}
 
-	numa::Vec3 PathTracer::ShadeMaterial(const ActorRayHit& rayHit, const Scene& scene, int rayDepth)
-	{
-		numa::Vec3 pixelColor{ 0.0f, 0.0f, 0.0f };
-
-		switch (rayHit.hitActor->GetMaterial()->GetMaterialType())
-		{
-			case MaterialType::LAMBERTIAN:
-			{
+	numa::Vec3 PathTracer::ShadeMaterial(const ActorRayHit& rayHit, const Scene& scene, int rayDepth) {
+		numa::Vec3 pixelColor{0.0f, 0.0f, 0.0f};
+		switch (rayHit.hitActor->GetMaterial()->GetMaterialType()) {
+			case MaterialType::LAMBERTIAN: {
 				Lambertian* lambertianMat = static_cast<Lambertian*>(rayHit.hitActor->GetMaterial());
 				pixelColor = ShadeLambertian(rayHit, scene, lambertianMat, rayDepth);
 			}
 			break;
-			case MaterialType::METAL:
-			{
+			case MaterialType::METAL: {
 				Metal* metalMat = static_cast<Metal*>(rayHit.hitActor->GetMaterial());
 				pixelColor = ShadeMetal(rayHit, scene, metalMat, rayDepth);
 			}
 			break;
-			case MaterialType::DIELECTRIC:
-			{
+			case MaterialType::DIELECTRIC: {
 				Dielectric* dielectricMat = static_cast<Dielectric*>(rayHit.hitActor->GetMaterial());
 				pixelColor = ShadeDielectric(rayHit, scene, dielectricMat, rayDepth);
 			}
 			break;
-			case MaterialType::PARTICIPATING_MEDIUM:
-			{
+			case MaterialType::PARTICIPATING_MEDIUM: {
 				ParticipatingMedium* medium = static_cast<ParticipatingMedium*>(rayHit.hitActor->GetMaterial());
-				if (!rayHit.hitFrontFace)
-				{
+				if (!rayHit.hitFrontFace) {
 					// We're inside the volume
-
 					ActorRayHit insideMediumRayHit = rayHit;
 					insideMediumRayHit.hitPoint = rayHit.hitRay.GetOrigin();
 					insideMediumRayHit.hitNormal = numa::Vec3{ 0.0f };
-
 					pixelColor = ShadeParticipatingMedium(insideMediumRayHit, scene, medium, rayDepth);
 				}
-				else
-				{
+				else {
 					// We're outside the volume
-
 					pixelColor = ShadeParticipatingMedium(rayHit, scene, medium, rayDepth);
 				}
 			}
 			break;
-			default:
-			{
+			default: {
 				assert(false && "Material type is not supported!");
 			}
 			break;
@@ -253,8 +240,7 @@ namespace aurora {
 
 		return pixelColor;
 	}
-	numa::Vec3 PathTracer::ShadeLambertian(const ActorRayHit& rayHit, const Scene& scene, const Lambertian* lambertian, int rayDepth)
-	{
+	numa::Vec3 PathTracer::ShadeLambertian(const ActorRayHit& rayHit, const Scene& scene, const Lambertian* lambertian, int rayDepth) {
 		numa::Vec3 albedo = lambertian->GetMaterialAlbedo();
 		numa::Vec3 wo = -rayHit.hitRay.GetDirection();
 		numa::Vec3 n = rayHit.hitNormal;
@@ -265,8 +251,7 @@ namespace aurora {
 		// 1. Lambertian
 
 		//numa::Vec3 scatteredDir = numa::RandomOnUnitSphere();
-		//if (numa::Dot(scatteredDir, rayHit.hitNormal) < 0.0f)
-		//{
+		//if (numa::Dot(scatteredDir, rayHit.hitNormal) < 0.0f) {
 		//	scatteredDir = -scatteredDir;
 		//}
 
@@ -277,52 +262,62 @@ namespace aurora {
 		// 3. Lambertian (fixed 2)
 
 		//numa::Vec3 wi = numa::Normalize(rayHit.hitNormal + numa::RandomInUnitCube());
-
 		//if (numa::Length2(wi) < 1e-10)
 		//	wi = rayHit.hitNormal;
 
-		//numa::Ray scatteredRay{ hitPoint, wi };
-
+		//numa::Ray scatteredRay{hitPoint, wi};
 		//float cosTheta = numa::Dot(n, wi);
-
 		//numa::Vec3 Lo = (albedo / numa::Pi<float>()) * ComputeColor(scatteredRay, scene, ++rayDepth) * cosTheta;
-
 		//return Lo;
 
 		// 4. Only evaluating lights
 
-		numa::Vec3 Lo{ 0.0f };
-
+		numa::Vec3 Lo{0.0f};
 		numa::Vec3 brdf = albedo / numa::Pi<float>();
 
 		// 4.1 Direct lighting
-
+		/*
 		LightSampleBundle lightBundle{};
 		scene.IntersectLights(hitPoint, lightBundle);
-
-		for (const LightSampleData& lightSample : lightBundle.bundle)
-		{
+		for (const LightSampleData& lightSample : lightBundle.bundle) {
 			// The equation is actually $Lo = (c_diff / pi) * pi * c_light * cos(theta)$, which
 			// simplifies to $Lo = c_diff * c_light * cos(theta)$
 			// where "theta" is the angle between the light direction "wi" and the surface normal "n".
-
 			Lo += brdf * lightSample.Li * numa::Dot(lightSample.wi, n);
+		}
+		*/
+		// TEST
+		Atmosphere* atmosphere = scene.GetAtmosphere();
+		if (atmosphere) {
+			DirectionalLight* dirLight = scene.GetDirectionalLight();
+			numa::Ray lightRay{hitPoint, dirLight->Wi()};
+			ActorRayHit anyHit{};
+			if (!scene.IntersectClosest(lightRay, anyHit)) {
+				// The light is reachable.
+				Lo += brdf * atmosphere->GetSunlight(hitPoint, dirLight) * numa::Dot(dirLight->Wi(), n);
+			}
+		} else {
+			LightSampleBundle lightBundle{};
+			scene.IntersectLights(hitPoint, lightBundle);
+			for (const LightSampleData& lightSample : lightBundle.bundle) {
+				// The equation is actually $Lo = (c_diff / pi) * pi * c_light * cos(theta)$, which
+				// simplifies to $Lo = c_diff * c_light * cos(theta)$
+				// where "theta" is the angle between the light direction "wi" and the surface normal "n".
+				Lo += brdf * lightSample.Li * numa::Dot(lightSample.wi, n);
+			}
 		}
 
 		// 4.2 Indirect lighting
 
 		numa::Vec3 wi = rayHit.hitNormal + numa::RandomInUnitCube();
-
 		if (numa::Length2(wi) < 1e-10)
 			wi = rayHit.hitNormal;
 		else
 			wi = numa::Normalize(wi);
 
-		numa::Ray scatteredRay{ hitPoint, wi };
-
+		numa::Ray scatteredRay{hitPoint, wi};
 		float cosTheta = numa::Dot(n, wi);
 		Lo += brdf * ComputeColor(scatteredRay, scene, ++rayDepth) * cosTheta;
-		
 		return Lo;
 	}
 	numa::Vec3 PathTracer::ShadeMetal(const ActorRayHit& rayHit, const Scene& scene, const Metal* metal, int rayDepth)
@@ -457,6 +452,7 @@ namespace aurora {
 		for (uint32_t segment = 0; segment < segments; segment++) {
 			// Move to the next segment and add some jitter within it.
 			float t_prime_jitter = 0.5f * dt; // or 't_shift'; could make the jitter random within 'dt'
+			// float t_prime_jitter = numa::RandomFloat() * dt;
 			float t_prime = segment * dt + t_prime_jitter; // or 'segment_t'
 			// Find the point corresponding to 't_prime'
 			numa::Vec3 p_prime = volumeCameraRay.GetPoint(t_prime); // 'segment_p'
@@ -534,6 +530,7 @@ namespace aurora {
 				// float light_path_tau{0.0f}; // light path optical thickness
 				for (uint32_t light_segment = 0; light_segment < light_segments; light_segment++) {
 					// Move to the next light path segment and add some jitter within it.
+					// float t_prime_jitter = numa::RandomFloat() * dt;
 					float light_t_prime_jitter = 0.5f * light_dt; // or 'light_t_shift'; could make the jitter random within 'light_dt'
 					float light_t_prime = light_segment * light_dt + light_t_prime_jitter; // or 'light_segment_t'
 					// Find the point corresponding to 'light_t_prime'

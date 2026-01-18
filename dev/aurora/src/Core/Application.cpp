@@ -85,7 +85,7 @@ namespace aurora {
 		cameraTransform->SetWorldPosition(numa::Vec3{ 1.5f, 2.5f, 3.5f });
 		// cameraTransform->SetWorldPosition(numa::Vec3{ 0.0f, 1.5f, 3.0f });
 		// cameraTransform->SetWorldPosition(numa::Vec3{ 0.0f, 0.0f, 3.0f });
-		cameraTransform->SetRotation(numa::Vec3{ -20.0f, 30.0f, 0.0f });
+		cameraTransform->SetRotation(numa::Vec3{ -20.0f, 20.0f, 0.0f });
 		// cameraTransform->SetRotation(numa::Vec3{ -20.0f, 0.0f, 0.0f });
 		// cameraTransform->SetWorldPosition(numa::Vec3{ -0.5f, 0.0f, -0.5f }); // inside the volume
 		// cameraTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f }); // straight forward
@@ -99,8 +99,8 @@ namespace aurora {
 		metalSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
 		std::shared_ptr<Transform> fuzzyMetalSphereTransform = std::make_shared<Transform>();
-		fuzzyMetalSphereTransform->SetWorldPosition(numa::Vec3{ 2.0f, 1.0f, -3.0f });
-		fuzzyMetalSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
+		fuzzyMetalSphereTransform->SetWorldPosition(numa::Vec3{2.0f, 1.0f, -5.0f});
+		fuzzyMetalSphereTransform->SetRotation(numa::Vec3{0.0f, 0.0f, 0.0f});
 
 		std::shared_ptr<Transform> participatingMediumSphereTransform = std::make_shared<Transform>();
 		participatingMediumSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, 1.0f, -0.5f });
@@ -111,12 +111,11 @@ namespace aurora {
 		lambertianPlaneTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 
 		std::shared_ptr<Transform> dirLightTransform = std::make_shared<Transform>();
-		dirLightTransform->SetWorldPosition(numa::Vec3{ 0.0f, 10.0f, 0.0f });
-		dirLightTransform->SetRotation(numa::Vec3{ -90.0f, 0.0f, 0.0f }); // zenith position (daylight)
-		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, 180.0f, 0.0f }); // horizon position
-		// dirLightTransform->SetRotation(numa::Vec3{ 5.0f, 180.0f, 0.0f }); // horizon position
-		// dirLightTransform->SetRotation(numa::Vec3{ 10.0f, 180.0f, 0.0f }); // horizon position
-		// dirLightTransform->SetRotation(numa::Vec3{ -10.0f, 180.0f, 0.0f }); // slightly above horizon position
+		dirLightTransform->SetWorldPosition(numa::Vec3{0.0f, 10.0f, 0.0f});
+		// dirLightTransform->SetRotation(numa::Vec3{ -90.0f, 0.0f, 0.0f }); // zenith position (daylight)
+		dirLightTransform->SetRotation(numa::Vec3{ 0.0f, 180.0f, 0.0f }); // horizon position (sunset)
+		// dirLightTransform->SetRotation(numa::Vec3{-5.0f, 180.0f, 0.0f}); // horizon position (sunset)
+		// dirLightTransform->SetRotation(numa::Vec3{-10.0f, 180.0f, 0.0f}); // // horzion position (sunset)
 		// dirLightTransform->SetRotation(numa::Vec3{ -10.0f, 0.0f, 0.0f }); // the other horizon
 		// dirLightTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f }); // the other horizon
 		// dirLightTransform->SetRotation(numa::Vec3{ -45.0f, 45.0f, 0.0f });
@@ -137,16 +136,16 @@ namespace aurora {
 		numa::Vec3 fuzzyMetalSphereAlbedo{ 0.5f, 0.5f, 0.5f };
 		std::shared_ptr<Metal> fuzzyMetalSphereMaterial = std::make_shared<Metal>(fuzzyMetalSphereAlbedo, 0.0f);
 
-		float sigma_a{ 0.5f };
-		// float sigma_a{ 0.0f };
-		float sigma_s{ 0.5f };
-		// float sigma_s{ 0.0f }; // black volume, like smoke
-		numa::Vec3 mediumColor{ 0.8f };
+		float sigma_a{0.25f};
+		// float sigma_a{0.0f};
+		float sigma_s{0.25f};
+		// float sigma_s{0.0f}; // black volume, like smoke
+		numa::Vec3 mediumColor{0.8f};
 		std::shared_ptr<ParticipatingMedium> participatingMediumSphereMaterial =
 			std::make_shared<ParticipatingMedium>(mediumColor, sigma_a, sigma_s);
 
-		// numa::Vec3 lambertianPlaneAlbedo{ 0.48f, 0.65f, 0.28f };
-		numa::Vec3 lambertianPlaneAlbedo{ 1.0f, 1.0f, 1.0f };
+		// numa::Vec3 lambertianPlaneAlbedo{0.48f, 0.65f, 0.28f};
+		numa::Vec3 lambertianPlaneAlbedo{1.0f, 1.0f, 1.0f};
 		std::shared_ptr<Lambertian> lambertianPlaneMaterial = std::make_shared<Lambertian>(lambertianPlaneAlbedo);
 
 		// Scene definition
@@ -166,6 +165,8 @@ namespace aurora {
 
 		uint32_t cameraWidth{800};
 		uint32_t cameraHeight{600};
+		// uint32_t cameraWidth{1920};
+		// uint32_t cameraHeight{1080};
 		float fov_y_deg{90.0f};
 		float fov_x_deg{106.0f};
 		// std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight,
@@ -247,12 +248,12 @@ namespace aurora {
 		demoScene->AddActor(lambertianSphereActor);
 		demoScene->AddActor(metalSphereActor);
 		demoScene->AddActor(fuzzyMetalSphereActor);
-		demoScene->AddActor(participatingMediumSphereActor);
+		// demoScene->AddActor(participatingMediumSphereActor);
 		demoScene->AddActor(lambertianPlaneActor);
 
 		demoScene->AddLight(dirLightActor);
 
-		// demoScene->SetAtmosphere(earthAtmosphere);
+		demoScene->SetAtmosphere(earthAtmosphere);
 
 		sceneManager->SetActiveScene(demoScene);
 	}

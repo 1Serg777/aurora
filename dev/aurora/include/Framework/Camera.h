@@ -24,9 +24,9 @@ namespace aurora {
 		float farPlane{10000.0f};
 		// 1. Physical camera properties.
 		//    What you have exposed in Maya.
-		float filmWidth{1.417}; // in inches. (multiply by 25.4 to convert to millimeters) (35.9918 mm.)
-		float filmHeight{0.945}; // in inches. (multiply by 25.4 to convert to millimeters) (24.003 mm.)
-		float focalLength{35}; // in millimeters.
+		float filmWidth{1.417f}; // in inches. (multiply by 25.4 to convert to millimeters) (35.9918 mm.)
+		float filmHeight{0.945f}; // in inches. (multiply by 25.4 to convert to millimeters) (24.003 mm.)
+		float focalLength{35.0f}; // in millimeters.
 		FilmFitType filmFitType{FilmFitType::FILL};
 		// 2. Non-physical camera properties.
 		//    What game engines usually expose to the player.
