@@ -32,9 +32,10 @@ namespace aurora {
 		void InitializePixelBuffer(uint32_t width, uint32_t height);
 		void ClearPixelBuffer(const numa::Vec3& clearColor);
 
-		void RenderScene(std::shared_ptr<Scene> scene);
+		void RenderSceneLoop(std::shared_ptr<Scene> scene);
 		void RenderPixels(const ImageRegion& renderRegion, const Scene& scene);
 		void RenderPixel(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene);
+		void RenderPixelLoop(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene);
 
 		// Tone Mapping Opperators
 

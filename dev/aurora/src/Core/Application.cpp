@@ -253,9 +253,88 @@ namespace aurora {
 
 		demoScene->AddLight(dirLightActor);
 
-		demoScene->SetAtmosphere(earthAtmosphere);
+		// demoScene->SetAtmosphere(earthAtmosphere);
 
 		sceneManager->SetActiveScene(demoScene);
+	}
+	void Application::CreateQuadLightDemoScene() {
+		// Meshes
+
+		std::shared_ptr<Sphere> diffuseSphereMesh = std::make_shared<Sphere>(1.0f);
+		std::shared_ptr<Plane> diffusePlaneMesh = std::make_shared<Plane>();
+
+		// Transforms
+
+		std::shared_ptr<Transform> cameraTransform = std::make_shared<Transform>();
+		cameraTransform->SetWorldPosition(numa::Vec3{0.0f, 3.0f, 0.0f});
+		cameraTransform->SetRotation(numa::Vec3{-15.0f, 0.0f, 0.0f});
+
+		std::shared_ptr<Transform> diffuseSphereTransform = std::make_shared<Transform>();
+		diffuseSphereTransform->SetWorldPosition(numa::Vec3{2.0f, 1.0f, -3.0f});
+		diffuseSphereTransform->SetRotation(numa::Vec3{0.0f, 0.0f, 0.0f});
+
+		std::shared_ptr<Transform> diffusePlaneTransform = std::make_shared<Transform>();
+		diffusePlaneTransform->SetWorldPosition(numa::Vec3{0.0f, 0.0f, 0.0f});
+		diffusePlaneTransform->SetRotation(numa::Vec3{0.0f, 0.0f, 0.0f});
+
+		std::shared_ptr<Transform> quadLightTransform = std::make_shared<Transform>();
+		quadLightTransform->SetWorldPosition(numa::Vec3{-2.0f, 1.0f, 0.0f});
+		quadLightTransform->SetRotation(numa::Vec3{0.0f, 90.0f, 0.0f});
+
+		// Materials
+
+		numa::Vec3 diffuseSphereAlbedo{0.48f, 0.68f, 0.25f};
+		std::shared_ptr<Lambertian> diffuseSphereMaterial = std::make_shared<Lambertian>(diffuseSphereAlbedo);
+
+		numa::Vec3 diffusePlaneAlbedo{1.0f, 1.0f, 1.0f};
+		std::shared_ptr<Lambertian> diffusePlaneMaterial = std::make_shared<Lambertian>(diffusePlaneAlbedo);
+
+		// Camera
+
+		// (ar = 16:9)
+		// 1920 x 1080 
+		// 1280 x 720
+		// 1024 × 576
+		// 
+		// (ar = 4:3)
+		// 800 x 600
+		// 400 x 240
+		
+		uint32_t cameraWidth{1920};
+		uint32_t cameraHeight{1080};
+
+		float fov_y_deg{90.0f};
+		float fov_x_deg{106.0f};
+
+		// std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight,
+		//                                                           FovType::VERTICAL, fov_y_deg);
+		std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight,
+			                                                      FovType::HORIZONTAL, fov_x_deg);
+		camera->SetTransform(cameraTransform);
+
+		// Actors
+
+		// Diffuse Sphere
+
+		std::shared_ptr<Actor> diffuseSphereActor = std::make_shared<Actor>("diffuse_sphere");
+		diffuseSphereActor->SetTransform(diffuseSphereTransform);
+		diffuseSphereActor->SetGeometry(diffuseSphereMesh);
+		diffuseSphereActor->SetMaterial(diffuseSphereMaterial);
+
+		// Plane
+
+		std::shared_ptr<Actor> diffusePlaneActor = std::make_shared<Actor>("diffuse_plane");
+		diffusePlaneActor->SetTransform(diffusePlaneTransform);
+		diffusePlaneActor->SetGeometry(diffusePlaneMesh);
+		diffusePlaneActor->SetMaterial(diffusePlaneMaterial);
+
+		numa::Vec3 quadLightCol{1.0f, 1.0f, 1.0f};
+		float quadLightStrength{15.0f};
+
+		std::shared_ptr<DirectionalLight> quadLightActor = std::make_shared<DirectionalLight>("Quad Area Light",
+			                                                                                  quadLightCol,
+			                                                                                  quadLightStrength);
+		quadLightActor->SetTransform(quadLightTransform);
 	}
 
 	void Application::RenderActiveScene(std::shared_ptr<Scene> scene) {

@@ -3,9 +3,11 @@
 namespace aurora {
 
 	enum class ComponentType {
-		Transform,
-		Geometry,
-		Material
+		TRANSFORM,
+		GEOMETRY,
+		MATERIAL,
+		LIGHT,
+		COUNT
 	};
 
 	class Actor;

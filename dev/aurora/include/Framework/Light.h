@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Framework/Actor.h"
+#include "Framework/Components/Component.h"
 
 #include "Vec.hpp"
 
@@ -20,37 +20,46 @@ namespace aurora {
 		numa::Vec3 wi{};
 		numa::Vec3 pos{};
 		numa::Vec3 Li{};
-		Light* lightPtr{ nullptr };
+		float pdf{1.0f};
+		Light* lightPtr{nullptr};
 	};
 
 	struct LightSampleBundle {
 		void AddLightSample(const LightSampleData& lightSample);
-
 		std::vector<LightSampleData> bundle;
 	};
 
-	class Light : public Actor {
+	class Light : public Component {
 	public:
-		Light(LightType type, std::string_view lightName);
+		Light(LightType type);
 
 		virtual void Sample(const numa::Vec3& p, LightSampleData& data) = 0;
+
+		virtual numa::Vec3 P() const = 0;
+
+		virtual numa::Vec3 Wi() const = 0;
+		virtual numa::Vec3 Li() const = 0;
+
+		virtual float pdf() const = 0;
 
 		LightType GetLightType() const;
 
 	private:
-		LightType type;
+		LightType type{};
 	};
 
 	class DirectionalLight : public Light {
 	public:
-		DirectionalLight(std::string_view lightName, const numa::Vec3& lightColor, float lightStrength);
+		DirectionalLight(const numa::Vec3& lightColor, float lightStrength);
 
 		void Sample(const numa::Vec3& p, LightSampleData& data) override;
 
-		numa::Vec3 Pos() const;
+		numa::Vec3 P() const;
 
 		numa::Vec3 Wi() const;
 		numa::Vec3 Li() const;
+
+		float pdf() const override;
 
 	private:
 		numa::Vec3 color{1.0f, 1.0f, 1.0f};
@@ -59,14 +68,16 @@ namespace aurora {
 
 	class PointLight : public Light {
 	public:
-		PointLight(std::string_view lightName, const numa::Vec3& lightColor, float lightIntensity);
+		PointLight(const numa::Vec3& lightColor, float lightIntensity);
 
 		void Sample(const numa::Vec3& p, LightSampleData& data) override;
 
-		numa::Vec3 Pos() const;
+		numa::Vec3 P() const;
 
 		numa::Vec3 Wi(const numa::Vec3& p) const;
 		numa::Vec3 Li(float d) const;
+
+		float pdf() const;
 
 	private:
 		numa::Vec3 color{1.0f, 1.0f, 1.0f};
@@ -75,9 +86,19 @@ namespace aurora {
 
 	class AreaLight : public Light {
 	public:
-		AreaLight(std::string_view lightName);
+		AreaLight(const numa::Vec3& lightColor, float lightIntensity);
 
 		void Sample(const numa::Vec3& p, LightSampleData& data) override;
+
+		numa::Vec3 P() const;
+
+		numa::Vec3 Li() const;
+
+		float pdf(const numa::Vec3& p, const numa::Vec3& wi) const;
+
+	private:
+		numa::Vec3 color{1.0f, 1.0f, 1.0f};
+		float intensity{1.0f};
 	};
 
 }

@@ -6,9 +6,6 @@
 #include "Framework/Components/Geometry.h"
 #include "Framework/Components/Material.h"
 
-#include "Framework/Geometry/Sphere.h"
-#include "Framework/Geometry/Plane.h"
-
 #include "Framework/Gradient.h"
 
 #include "Numa.h"
@@ -22,18 +19,17 @@ namespace aurora {
 
 	static constexpr float bias{0.00001f};
 
-	void PathTracer::InitializePixelBuffer(uint32_t width, uint32_t height)
-	{
+	void PathTracer::InitializePixelBuffer(uint32_t width, uint32_t height) {
 		pixelBuffer.reset();
 		pixelBuffer = std::make_shared<f32PixelBuffer>(width, height);
 	}
-	void PathTracer::ClearPixelBuffer(const numa::Vec3& clearColor)
-	{
+	void PathTracer::ClearPixelBuffer(const numa::Vec3& clearColor) {
 		pixelBuffer->Fill(clearColor);
 	}
 
-	void PathTracer::RenderScene(std::shared_ptr<Scene> scene)
-	{
+	void PathTracer::RenderSceneLoop(std::shared_ptr<Scene> scene) {
+		// OLD
+		/*
 		Camera* camera = scene->GetCamera();
 
 		uint32_t resolution_x = camera->GetCameraResolution_X();
@@ -50,6 +46,22 @@ namespace aurora {
 			for (uint32_t x = 0; x < resolution_x; x++)
 			{
 				size_t current_pixel_idx = static_cast<size_t>(y) * resolution_x + x;
+				RenderPixel(x, y, *scene);
+			}
+			std::clog << "\rProgress: " << progress << "%    " << std::flush;
+		}
+		*/
+
+		Camera* camera = scene->GetCamera();
+		uint32_t resolution_x = camera->GetCameraResolution_X();
+		uint32_t resolution_y = camera->GetCameraResolution_Y();
+
+		InitializePixelBuffer(resolution_x, resolution_y);
+		size_t pixelsToRender = static_cast<size_t>(resolution_x) * resolution_y;
+		for (uint32_t y = 0; y < resolution_y; y++) {
+			float progress = static_cast<float>(y + 1) / resolution_y;
+			progress *= 100.0f;
+			for (uint32_t x = 0; x < resolution_x; x++) {
 				RenderPixel(x, y, *scene);
 			}
 			std::clog << "\rProgress: " << progress << "%    " << std::flush;
@@ -79,6 +91,54 @@ namespace aurora {
 			pixelColor = ComputeColor(ray, scene, rayDepth);
 		}
 		pixelBuffer->WritePixel(raster_coord_x, raster_coord_y, pixelColor);
+	}
+
+	void PathTracer::RenderPixelLoop(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene) {
+		Camera* sceneCamera = scene.GetCamera();
+		numa::Vec3 radiance{0.0f};
+		float throughput{1.0f};
+		int rayDepth{0};
+		for (int sample = 0; sample < sampleCount; sample++) {
+			numa::Ray ray = sceneCamera->GenerateCameraRayJittered(raster_coord_x, raster_coord_y);
+			for (int rayDepth = 0; rayDepth < rayDepthLimit; rayDepth++) {
+				ActorRayHit rayHit{};
+				if (scene.IntersectClosest(ray, rayHit) && rayHit.hitActor) {
+					// Extract hit data.
+
+					numa::Vec3 wo = -rayHit.hitRay.GetDirection();
+					numa::Vec3 n = rayHit.hitNormal;
+					numa::Vec3 hitPoint = rayHit.hitPoint + bias * rayHit.hitNormal;
+					
+					// Next Event Estimation (NEE)
+					LightSampleBundle lightBundle{};
+					numa::Vec3 neeRadiance{0.0f};
+					scene.IntersectLights(hitPoint, lightBundle);
+					for (const LightSampleData& lightSample : lightBundle.bundle) {
+						neeRadiance += throughput * lightSample.Li * numa::Dot(lightSample.wi, n);
+					}
+					
+					// Indirect lighting.
+					numa::Vec3 wi = rayHit.hitNormal + numa::RandomInUnitCube();
+					if (numa::Length2(wi) < 1e-10)
+						wi = rayHit.hitNormal;
+					else
+						wi = numa::Normalize(wi);
+
+					numa::Ray scatteredRay{ hitPoint, wi };
+					float cosTheta = numa::Dot(n, wi);
+					Lo += brdf * ComputeColor(scatteredRay, scene, ++rayDepth) * cosTheta;
+					return Lo;
+
+				} else {
+					// Missed, use the background color
+					// or the atmosphere color if the scene has one.
+					// TODO
+				}
+			}
+		}
+		float scaleFactor = 1.0f / sampleCount;
+		radiance *= scaleFactor;
+		pixelBuffer->WritePixel(raster_coord_x, raster_coord_y, radiance);
 	}
 
 	void PathTracer::ToneMapReinhardtRGB() {

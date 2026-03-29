@@ -23,6 +23,10 @@ namespace aurora {
 		numa::Mat3 GetRotationMatrix() const;
 		numa::Mat4 GetWorldMatrix() const;
 
+		numa::Vec3 GetRightAxis() const;
+		numa::Vec3 GetUpAxis() const;
+		numa::Vec3 GetForwardAxis() const;
+
 	private:
 		void UpdateWorldMatrix();
 

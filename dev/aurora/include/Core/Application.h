@@ -34,6 +34,7 @@ namespace aurora {
 		void CreateTaskManager();
 
 		void CreateDemoScene();
+		void CreateQuadLightDemoScene();
 
 		void RenderActiveScene(std::shared_ptr<Scene> scene);
 		void CreateSceneRenderingJob(std::shared_ptr<Scene> scene);
