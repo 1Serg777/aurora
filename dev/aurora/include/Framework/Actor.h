@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Framework/Components/Component.h"
+#include "Framework/Components/Geometry.h"
 
 #include "Ray.h"
 
@@ -13,11 +14,11 @@ namespace aurora {
 
 	class Actor;
 
-	struct ActorRayHit : GeometryRayHit {
+	struct ActorRayHit : public GeometryRayHit {
 		Actor* hitActor{nullptr};
 	};
 
-	class Actor {
+	class Actor : public std::enable_shared_from_this<Actor> {
 	public:
 		Actor(std::string_view actorName);
 
@@ -48,7 +49,7 @@ namespace aurora {
 		std::shared_ptr<T> GetComponent() const {
 			auto find = this->components.find(T::COMPONENT_TYPE);
 			if (find != this->components.end()) {
-				return std::static_pointer_cast<T>(component->second);
+				return std::static_pointer_cast<T>(find->second);
 			}
 			return std::shared_ptr<T>();
 		}

@@ -24,10 +24,11 @@ namespace aurora {
 		Scene(std::string_view sceneName);
 
 		bool IntersectClosest(const numa::Ray& ray, ActorRayHit& rayHit) const;
-		bool IntersectLights(const numa::Vec3& p, LightSampleBundle& lightBundle) const;
+		bool IntersectLights(const numa::Vec3& p, const numa::Vec3& N, LightSampleBundle& lightBundle) const;
 
 		void AddActor(std::shared_ptr<Actor> actor);
 		void AddLight(std::shared_ptr<DirectionalLight> light);
+		void AddLight(std::shared_ptr<AreaLight> light);
 
 		void SetAtmosphere(std::shared_ptr<Atmosphere> atmosphere);
 		void SetCamera(std::shared_ptr<Camera> camera);
@@ -50,6 +51,7 @@ namespace aurora {
 		std::shared_ptr<Atmosphere> atmosphere;
 		std::shared_ptr<Camera> camera;
 		DirectionalLight* dirLight{nullptr};
+		AreaLight* quadLight{nullptr};
 	};
 
 }	

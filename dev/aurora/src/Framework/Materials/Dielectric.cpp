@@ -12,6 +12,12 @@ namespace aurora
 	{
 	}
 
+	numa::Vec3 Dielectric::Scatter(const numa::Vec3& wo, const numa::Vec3& N,
+			                       numa::Vec3& brdf, float& pdf) const {
+		// TODO
+		return numa::Vec3{0.0f, 1.0f, 0.0f};
+	}
+
 	FresnelData Dielectric::Fresnel(const numa::Vec3& incident, const numa::Vec3& normal, float ior) const
 	{
 		return RefractImpl1(incident, normal, ior);

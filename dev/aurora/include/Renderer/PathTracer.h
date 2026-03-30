@@ -63,7 +63,7 @@ namespace aurora {
 		std::shared_ptr<f32PixelBuffer> pixelBuffer;
 
 		int rayDepthLimit{5};
-		int sampleCount{50};
+		int sampleCount{150};
 		// int sampleCount{25};
 		// int sampleCount{15};
 		// int sampleCount{10};

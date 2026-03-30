@@ -10,6 +10,7 @@
 
 #include "Numa.h"
 #include "Random.h"
+#include "Sample.h"
 
 #include <cassert>
 #include <iostream>
@@ -59,11 +60,11 @@ namespace aurora {
 		InitializePixelBuffer(resolution_x, resolution_y);
 		size_t pixelsToRender = static_cast<size_t>(resolution_x) * resolution_y;
 		for (uint32_t y = 0; y < resolution_y; y++) {
+			for (uint32_t x = 0; x < resolution_x; x++) {
+				RenderPixelLoop(x, y, *scene);
+			}
 			float progress = static_cast<float>(y + 1) / resolution_y;
 			progress *= 100.0f;
-			for (uint32_t x = 0; x < resolution_x; x++) {
-				RenderPixel(x, y, *scene);
-			}
 			std::clog << "\rProgress: " << progress << "%    " << std::flush;
 		}
 	}
@@ -96,43 +97,57 @@ namespace aurora {
 	void PathTracer::RenderPixelLoop(uint32_t raster_coord_x, uint32_t raster_coord_y, const Scene& scene) {
 		Camera* sceneCamera = scene.GetCamera();
 		numa::Vec3 radiance{0.0f};
-		float throughput{1.0f};
-		int rayDepth{0};
 		for (int sample = 0; sample < sampleCount; sample++) {
 			numa::Ray ray = sceneCamera->GenerateCameraRayJittered(raster_coord_x, raster_coord_y);
+			numa::Vec3 throughput{1.0f};
 			for (int rayDepth = 0; rayDepth < rayDepthLimit; rayDepth++) {
 				ActorRayHit rayHit{};
 				if (scene.IntersectClosest(ray, rayHit) && rayHit.hitActor) {
-					// Extract hit data.
+					// Check if we hit a light source.
+					if (rayHit.hitActor->GetComponent<Light>()) {
+						std::shared_ptr<Light> light = rayHit.hitActor->GetComponent<Light>();
+						// If 'rayDepth != 0' then we have already counted this contribution as part of the NEE.
+						if (rayDepth == 0) {
+							LightSampleData lightSampleData{};
+							light->Sample(rayHit.hitPoint, rayHit.hitNormal, lightSampleData);
+							radiance += lightSampleData.Li;
+							// radiance = numa::Vec3{1.0f, 0.0f, 0.0f} * 10.0f;
+						}
+						break;
+					}
 
+					// Extract hit data.
 					numa::Vec3 wo = -rayHit.hitRay.GetDirection();
 					numa::Vec3 n = rayHit.hitNormal;
 					numa::Vec3 hitPoint = rayHit.hitPoint + bias * rayHit.hitNormal;
+
+					std::shared_ptr<Material> material = rayHit.hitActor->GetComponent<Material>();
+					if (!material) break;
+					numa::Vec3 brdf{1.0f};
+					float pdf{1.0f};
+					numa::Vec3 wi = material->Scatter(wo, n, brdf, pdf);
 					
 					// Next Event Estimation (NEE)
 					LightSampleBundle lightBundle{};
-					numa::Vec3 neeRadiance{0.0f};
-					scene.IntersectLights(hitPoint, lightBundle);
-					for (const LightSampleData& lightSample : lightBundle.bundle) {
-						neeRadiance += throughput * lightSample.Li * numa::Dot(lightSample.wi, n);
+					if (scene.IntersectLights(hitPoint, n, lightBundle)) {
+						for (const LightSampleData& lightSample : lightBundle.bundle) {
+							float cosTheta = std::clamp(numa::Dot(lightSample.wi, n), 0.0f, 1.0f);
+							radiance += throughput * (brdf * lightSample.Li * cosTheta) / lightSample.pdf;
+						}
 					}
 					
 					// Indirect lighting.
-					numa::Vec3 wi = rayHit.hitNormal + numa::RandomInUnitCube();
-					if (numa::Length2(wi) < 1e-10)
-						wi = rayHit.hitNormal;
-					else
-						wi = numa::Normalize(wi);
-
-					numa::Ray scatteredRay{ hitPoint, wi };
-					float cosTheta = numa::Dot(n, wi);
-					Lo += brdf * ComputeColor(scatteredRay, scene, ++rayDepth) * cosTheta;
-					return Lo;
-
+					float cosTheta = std::clamp(numa::Dot(n, wi), 0.0f, 1.0f);
+					throughput *= (brdf * cosTheta) / pdf;
+					ray = numa::Ray{hitPoint, wi};
 				} else {
 					// Missed, use the background color
 					// or the atmosphere color if the scene has one.
-					// TODO
+					// radiance += throughput * BackgroundColor(ray);
+					// radiance += throughput * numa::Vec3{0.05f, 0.05f, 0.05f};
+					// radiance = numa::Vec3{0.0f};
+					// radiance = numa::Vec3{0.0,1.0f,0.0f} * 10.0f;
+					break;
 				}
 			}
 		}
@@ -205,19 +220,13 @@ namespace aurora {
 		}
 	}
 
-	void PathTracer::GammaCorrectPower12()
-	{
+	void PathTracer::GammaCorrectPower12() {
 		uint32_t resolution_x = pixelBuffer->GetWidth();
 		uint32_t resolution_y = pixelBuffer->GetHeight();
-
 		// Normalize pixel values
-
-		for (uint32_t y = 0; y < resolution_y; y++)
-		{
-			for (uint32_t x = 0; x < resolution_x; x++)
-			{
+		for (uint32_t y = 0; y < resolution_y; y++) {
+			for (uint32_t x = 0; x < resolution_x; x++) {
 				numa::Vec3& radiance = pixelBuffer->GetPixelValue(x, y);
-
 				// radiance = numa::Pow(radiance, 0.5f);
 				// radiance = numa::Pow(radiance, 1.0f / 2.2f);
 				radiance = numa::Sqrt(radiance);
@@ -242,8 +251,9 @@ namespace aurora {
 		ActorRayHit rayHit{};
 		if (scene.IntersectClosest(ray, rayHit) && rayHit.hitActor) {
 			// Hit something, use this object's color
-			if (rayHit.hitActor->HasMaterial())
-				pixelColor = ShadeMaterial(rayHit, scene, rayDepth);
+			std::shared_ptr<Material> material = rayHit.hitActor->GetComponent<Material>();
+			if (!material) return numa::Vec3{0.0f, 0.0f, 0.0f};
+			pixelColor = ShadeMaterial(rayHit, scene, rayDepth);
 		} else {
 			// Missed, use the background color
 			// or the atmosphere color if the scene has one.
@@ -261,24 +271,27 @@ namespace aurora {
 
 	numa::Vec3 PathTracer::ShadeMaterial(const ActorRayHit& rayHit, const Scene& scene, int rayDepth) {
 		numa::Vec3 pixelColor{0.0f, 0.0f, 0.0f};
-		switch (rayHit.hitActor->GetMaterial()->GetMaterialType()) {
+		std::shared_ptr<Material> material = rayHit.hitActor->GetComponent<Material>();
+		if (!material) return numa::Vec3{0.0f, 0.0f, 0.0f};
+
+		switch (material->GetMaterialType()) {
 			case MaterialType::LAMBERTIAN: {
-				Lambertian* lambertianMat = static_cast<Lambertian*>(rayHit.hitActor->GetMaterial());
+				Lambertian* lambertianMat = static_cast<Lambertian*>(material.get());
 				pixelColor = ShadeLambertian(rayHit, scene, lambertianMat, rayDepth);
 			}
 			break;
 			case MaterialType::METAL: {
-				Metal* metalMat = static_cast<Metal*>(rayHit.hitActor->GetMaterial());
+				Metal* metalMat = static_cast<Metal*>(material.get());
 				pixelColor = ShadeMetal(rayHit, scene, metalMat, rayDepth);
 			}
 			break;
 			case MaterialType::DIELECTRIC: {
-				Dielectric* dielectricMat = static_cast<Dielectric*>(rayHit.hitActor->GetMaterial());
+				Dielectric* dielectricMat = static_cast<Dielectric*>(material.get());
 				pixelColor = ShadeDielectric(rayHit, scene, dielectricMat, rayDepth);
 			}
 			break;
 			case MaterialType::PARTICIPATING_MEDIUM: {
-				ParticipatingMedium* medium = static_cast<ParticipatingMedium*>(rayHit.hitActor->GetMaterial());
+				ParticipatingMedium* medium = static_cast<ParticipatingMedium*>(material.get());
 				if (!rayHit.hitFrontFace) {
 					// We're inside the volume
 					ActorRayHit insideMediumRayHit = rayHit;
@@ -358,7 +371,7 @@ namespace aurora {
 			}
 		} else {
 			LightSampleBundle lightBundle{};
-			scene.IntersectLights(hitPoint, lightBundle);
+			scene.IntersectLights(hitPoint, n, lightBundle);
 			for (const LightSampleData& lightSample : lightBundle.bundle) {
 				// The equation is actually $Lo = (c_diff / pi) * pi * c_light * cos(theta)$, which
 				// simplifies to $Lo = c_diff * c_light * cos(theta)$
@@ -529,7 +542,7 @@ namespace aurora {
 				// Sample the light, retrieving all the necessary information we need about it.
 				// This includes light direction 'wi', radiance 'Li', and light's position 'p'.
 				LightSampleData lightSampleData{};
-				light->Sample(p_prime, lightSampleData);
+				light->Sample(p_prime, numa::Vec3{0.0f} /* not used! */, lightSampleData);
 				// Now we need to make sure that there's nothing in our way to reach the light.
 				// Again, the assumption is that there's nothing inside the volume, thus
 				// the only objects obstructing the view can be outside the medium.

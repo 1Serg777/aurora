@@ -31,16 +31,11 @@ namespace aurora {
 
 	class Light : public Component {
 	public:
+		static constexpr ComponentType COMPONENT_TYPE = ComponentType::LIGHT;
+
 		Light(LightType type);
 
-		virtual void Sample(const numa::Vec3& p, LightSampleData& data) = 0;
-
-		virtual numa::Vec3 P() const = 0;
-
-		virtual numa::Vec3 Wi() const = 0;
-		virtual numa::Vec3 Li() const = 0;
-
-		virtual float pdf() const = 0;
+		virtual void Sample(const numa::Vec3& p, const numa::Vec3& N, LightSampleData& data) = 0;
 
 		LightType GetLightType() const;
 
@@ -52,14 +47,14 @@ namespace aurora {
 	public:
 		DirectionalLight(const numa::Vec3& lightColor, float lightStrength);
 
-		void Sample(const numa::Vec3& p, LightSampleData& data) override;
+		void Sample(const numa::Vec3& p, const numa::Vec3& N, LightSampleData& data) override;
 
 		numa::Vec3 P() const;
 
 		numa::Vec3 Wi() const;
 		numa::Vec3 Li() const;
 
-		float pdf() const override;
+		float pdf() const;
 
 	private:
 		numa::Vec3 color{1.0f, 1.0f, 1.0f};
@@ -70,7 +65,7 @@ namespace aurora {
 	public:
 		PointLight(const numa::Vec3& lightColor, float lightIntensity);
 
-		void Sample(const numa::Vec3& p, LightSampleData& data) override;
+		void Sample(const numa::Vec3& p, const numa::Vec3& N, LightSampleData& data) override;
 
 		numa::Vec3 P() const;
 
@@ -88,13 +83,13 @@ namespace aurora {
 	public:
 		AreaLight(const numa::Vec3& lightColor, float lightIntensity);
 
-		void Sample(const numa::Vec3& p, LightSampleData& data) override;
+		void Sample(const numa::Vec3& p, const numa::Vec3& N, LightSampleData& data) override;
 
 		numa::Vec3 P() const;
 
 		numa::Vec3 Li() const;
 
-		float pdf(const numa::Vec3& p, const numa::Vec3& wi) const;
+		float pdf(const numa::Vec3& wi, const numa::Vec3& N, float r) const;
 
 	private:
 		numa::Vec3 color{1.0f, 1.0f, 1.0f};

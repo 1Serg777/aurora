@@ -9,6 +9,8 @@ namespace aurora {
 
 	class Transform : public Component {
 	public:
+		static constexpr ComponentType COMPONENT_TYPE = ComponentType::TRANSFORM;
+
 		Transform();
 		Transform(const numa::Vec3& rotation, const numa::Vec3& position);
 

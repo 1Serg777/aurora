@@ -32,12 +32,12 @@ namespace aurora {
 		*/
 		return closest_distance != std::numeric_limits<float>::max();
 	}
-	bool Scene::IntersectLights(const numa::Vec3& p, LightSampleBundle& lightBundle) const {
+	bool Scene::IntersectLights(const numa::Vec3& p, const numa::Vec3& N, LightSampleBundle& lightBundle) const {
 		bool anyLightInView{false};
 		for (auto& light : lights) {
 			// Sample the light source
 			LightSampleData lightSample{};
-			light->Sample(p, lightSample);
+			light->Sample(p, N, lightSample);
 			// Create a ray toward the light source
 			numa::Ray lightRay{
 				p, // 'bias' should be handled elsewhere!
@@ -77,6 +77,10 @@ namespace aurora {
 	}
 	void Scene::AddLight(std::shared_ptr<DirectionalLight> light) {
 		dirLight = light.get();
+		lights.push_back(light);
+	}
+	void Scene::AddLight(std::shared_ptr<AreaLight> light) {
+		quadLight = light.get();
 		lights.push_back(light);
 	}
 

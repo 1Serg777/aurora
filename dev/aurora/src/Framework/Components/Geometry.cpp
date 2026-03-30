@@ -22,8 +22,8 @@ namespace aurora {
 	bool Plane::Intersect(const numa::Ray& ray, GeometryRayHit& geometryHit) {
 		geometryHit.hitRay = ray;
 
-		std::shared_ptr<Transform> transform = parentActor->GetComponent<Transform>();
-		if (!transform) return;
+		std::shared_ptr<Transform> transform = ownerActor.lock()->GetComponent<Transform>();
+		if (!transform) return false;
 
 		const numa::Mat3 rotMat = transform->GetRotationMatrix();
 		const numa::Vec3& planeOrigin = transform->GetWorldPosition();
@@ -80,8 +80,8 @@ namespace aurora {
 	}
 
 	bool Sphere::Intersect(const numa::Ray& ray, GeometryRayHit& geometryHit) {
-		std::shared_ptr<Transform> transform = parentActor->GetComponent<Transform>();
-		if (!transform) return;
+		std::shared_ptr<Transform> transform = ownerActor.lock()->GetComponent<Transform>();
+		if (!transform) return false;
 
 		numa::Sphere sphere{
 			transform->GetWorldPosition(), this->radius
@@ -130,8 +130,8 @@ namespace aurora {
 		return 0.0f;
 	}
 	float Sphere::DistanceFromEdgeNormalized(const numa::Vec3& point) const {
-		std::shared_ptr<Transform> transform = parentActor->GetComponent<Transform>();
-		if (!transform) return;
+		std::shared_ptr<Transform> transform = ownerActor.lock()->GetComponent<Transform>();
+		if (!transform) return 0.0f;
 
 		const numa::Vec3& point_radius_vector = point - transform->GetWorldPosition();
 		float point_radius = numa::Length(point_radius_vector);
@@ -144,8 +144,8 @@ namespace aurora {
 	}
 
 	numa::Vec3 Sphere::ComputeNormal(const numa::Vec3& pointOnSphere) const {
-		std::shared_ptr<Transform> transform = parentActor->GetComponent<Transform>();
-		if (!transform) return;
+		std::shared_ptr<Transform> transform = ownerActor.lock()->GetComponent<Transform>();
+		if (!transform) return numa::Vec3{0.0f,1.0f,0.0f};
 
 		return numa::Normalize(pointOnSphere - transform->GetWorldPosition());
 	}

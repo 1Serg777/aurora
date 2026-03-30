@@ -38,6 +38,8 @@ namespace aurora {
 
 	class Geometry : public Component {
 	public:
+		static constexpr ComponentType COMPONENT_TYPE = ComponentType::GEOMETRY;
+
 		Geometry(GeometryType geometryType);
 		virtual bool Intersect(const numa::Ray& ray, GeometryRayHit& geometryHit) = 0;
 		GeometryType GetGeometryType() const;

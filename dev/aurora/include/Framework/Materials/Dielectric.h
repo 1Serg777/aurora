@@ -22,6 +22,9 @@ namespace aurora
 
 		Dielectric(const numa::Vec3& attenuation, float ior);
 
+		numa::Vec3 Scatter(const numa::Vec3& wo, const numa::Vec3& N,
+			               numa::Vec3& brdf, float& pdf) const override;
+
 		FresnelData Fresnel(const numa::Vec3& incident, const numa::Vec3& normal, float ior) const;
 
 		numa::Vec3 Reflect(const numa::Vec3& incidentDirection, const numa::Vec3& normal) const;

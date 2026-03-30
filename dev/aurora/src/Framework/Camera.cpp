@@ -1,5 +1,7 @@
 #include "Framework/Camera.h"
 
+#include "Framework/Components/Transform.h"
+
 #include "Core/Utility.h"
 
 #include "Numa.h"
@@ -48,7 +50,7 @@ namespace aurora {
 		return numa::Ray{ rayOrigin, rayDirection };
 		*/
 
-		Transform* cameraTransform = GetTransform();
+		std::shared_ptr<Transform> cameraTransform = GetComponent<Transform>();
 		if (cameraTransform) {
 			rayOrigin = cameraTransform->GetWorldPosition();
 			rayDirection = cameraTransform->GetRotationMatrix() * rayDirection;
@@ -82,7 +84,7 @@ namespace aurora {
 		numa::Vec3 rayOrigin{0.0f};
 		numa::Vec3 rayDirection = numa::Normalize(pixelPosition);
 
-		Transform* cameraTransform = GetTransform();
+		std::shared_ptr<Transform> cameraTransform = GetComponent<Transform>();
 		if (cameraTransform) {
 			rayOrigin = cameraTransform->GetWorldPosition();
 			rayDirection = cameraTransform->GetRotationMatrix() * rayDirection;

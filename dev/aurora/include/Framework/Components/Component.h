@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 namespace aurora {
 
 	enum class ComponentType {
@@ -16,16 +18,14 @@ namespace aurora {
 	public:
 		ComponentType GetComponentType() const;
 
-		void AttachParentActor(Actor* actor);
-		void DetachParentActor();
+		virtual void OnOwnerAttach(std::shared_ptr<Actor> ownerActor);
+		virtual void OnOwnerDetach();
 
 	protected:
 		Component(ComponentType componentType);
 		~Component() = default;
 
-		Actor* parentActor{nullptr};
-
-	private:
+		std::weak_ptr<Actor> ownerActor;
 		ComponentType componentType{};
 	};
 

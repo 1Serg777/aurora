@@ -50,7 +50,7 @@ namespace aurora {
 
 	void Transform::UpdateWorldMatrix() {
 		this->world = numa::Mat4{
-			numa::EulerAnglesRotate(
+			numa::RotateYawPitchRoll(
 				numa::Vec3{
 					numa::Rad(rotation.x),
 					numa::Rad(rotation.y),

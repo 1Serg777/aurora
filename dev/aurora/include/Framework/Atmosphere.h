@@ -4,7 +4,6 @@
 #include "Framework/Light.h"
 #include "Framework/Components/Geometry.h"
 #include "Framework/Components/Transform.h"
-#include "Geometry/Sphere.h"
 
 #include <memory>
 #include <string>

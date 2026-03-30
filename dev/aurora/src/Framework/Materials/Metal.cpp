@@ -3,27 +3,22 @@
 #include "Numa.h"
 #include "Random.h"
 
-namespace aurora
-{
+namespace aurora {
+
 	Metal::Metal()
-		: Material(MaterialType::METAL)
-	{
+		: Material(MaterialType::METAL) {
 	}
 	Metal::Metal(const numa::Vec3& attenuation, float fuzziness)
-		: Material(MaterialType::METAL), attenuation(attenuation), fuzziness(fuzziness)
-	{
+		: Material(MaterialType::METAL), attenuation(attenuation), fuzziness(fuzziness) {
 	}
 
-	/*
-	numa::Vec3 Metal::Scatter(const numa::Vec3& incidentDirection, const numa::Vec3& normal)
-	{
+	numa::Vec3 Metal::Scatter(const numa::Vec3& wo, const numa::Vec3& N,
+			                  numa::Vec3& brdf, float& pdf) const {
 		// TODO
-		return numa::Vec3{ 0.0f, 1.0f, 0.0f };
+		return numa::Vec3{0.0f, 1.0f, 0.0f};
 	}
-	*/
 
-	numa::Vec3 Metal::Reflect(const numa::Vec3& incidentDirection, const numa::Vec3& normal) const
-	{
+	numa::Vec3 Metal::Reflect(const numa::Vec3& incidentDirection, const numa::Vec3& normal) const {
 		numa::Vec3 reflectedDir =
 			incidentDirection -
 			2.0f * (numa::Dot(incidentDirection, normal)) * normal;
@@ -40,12 +35,11 @@ namespace aurora
 		return reflectedDir;
 	}
 
-	void Metal::SetAttenuation(const numa::Vec3& attenuation)
-	{
+	void Metal::SetAttenuation(const numa::Vec3& attenuation) {
 		this->attenuation = attenuation;
 	}
-	const numa::Vec3& Metal::GetAttenuation() const
-	{
+	const numa::Vec3& Metal::GetAttenuation() const {
 		return attenuation;
 	}
+
 }

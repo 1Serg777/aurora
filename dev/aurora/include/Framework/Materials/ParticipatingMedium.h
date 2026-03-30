@@ -11,6 +11,9 @@ namespace aurora {
 		ParticipatingMedium();
 		ParticipatingMedium(const numa::Vec3& mediumColor, float sigma_a, float sigma_s);
 
+		numa::Vec3 Scatter(const numa::Vec3& wo, const numa::Vec3& N,
+			               numa::Vec3& brdf, float& pdf) const override;
+
 		float EvaluateIsotropicPhaseFunction(float cosTheta) const;
 		float EvaluateHenyeyGreensteinPhaseFunction(float cosTheta) const;
 

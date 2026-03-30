@@ -13,6 +13,12 @@ namespace aurora {
 		sigma_a(sigma_a), sigma_s(sigma_s) {
 	}
 
+	numa::Vec3 ParticipatingMedium::Scatter(const numa::Vec3& wo, const numa::Vec3& N,
+			                                numa::Vec3& brdf, float& pdf) const {
+		// TODO
+		return numa::Vec3{0.0f, 1.0f, 0.0f};
+	}
+
 	float ParticipatingMedium::EvaluateIsotropicPhaseFunction(float cosTheta) const {
 		// 1. Isotropic phase function
 		static constexpr float p = 1.0f / (4.0f * numa::Pi<float>());

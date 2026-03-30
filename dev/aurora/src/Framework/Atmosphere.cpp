@@ -38,7 +38,7 @@ namespace aurora {
 		// Sample the directional light retrieving all the necessary information we need about it.
 		// This includes light direction 'wi', radiance 'Li', and position 'p'.
 		LightSampleData lightSampleData{};
-		sun->Sample(p, lightSampleData);
+		sun->Sample(p, numa::Vec3{0.0f} /* not used! */, lightSampleData);
 		// Now we need to make sure that there's nothing in our way to reach the light.
 		// Again, the assumption for now is that there's nothing in the atmosphere blocking the light.
 		// [TODO]: think about relaxing this assumption.
@@ -161,7 +161,7 @@ namespace aurora {
 			// Sample the directional light retrieving all the necessary information we need about it.
 			// This includes light direction 'wi', radiance 'Li', and position 'p'.
 			LightSampleData lightSampleData{};
-			dirLight->Sample(p_prime, lightSampleData);
+			dirLight->Sample(p_prime, numa::Vec3{ 0.0f } /* not used! */, lightSampleData);
 			// Now we need to make sure that there's nothing in our way to reach the light.
 			// Again, the assumption for now is that there's nothing in the atmosphere blocking the light.
 			// [TODO]: think about relaxing this assumption.
@@ -306,22 +306,22 @@ namespace aurora {
 		groundSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, -atmosphereData.groundRadius, 0.0f });
 		groundSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 		groundSphere = std::make_shared<Actor>(atmosphereName + "_Ground");
-		groundSphere->SetGeometry(groundSphereGeometry);
-		groundSphere->SetTransform(groundSphereTransform);
+		groundSphere->AttachComponent<Transform>(groundSphereTransform);
+		groundSphere->AttachComponent<Geometry>(groundSphereGeometry);
 
 		std::shared_ptr<Transform> atmosphereSphereTransform = std::make_shared<Transform>();
 		atmosphereSphereTransform->SetWorldPosition(numa::Vec3{ 0.0f, -atmosphereData.groundRadius, 0.0f });
 		atmosphereSphereTransform->SetRotation(numa::Vec3{ 0.0f, 0.0f, 0.0f });
 		atmosphereSphere = std::make_shared<Actor>(atmosphereName + "_Atmosphere");
-		atmosphereSphere->SetGeometry(atmosphereSphereGeometry);
-		atmosphereSphere->SetTransform(atmosphereSphereTransform);
+		atmosphereSphere->AttachComponent<Transform>(atmosphereSphereTransform);
+		atmosphereSphere->AttachComponent<Geometry>(atmosphereSphereGeometry);
 	}
 
 	float Atmosphere::ComputeSamplePointHeight(const numa::Vec3& p) const {
 		// The assumption is that the caller code has made sure that
 		// the sample point is between the two spheres.
 		float height =
-			numa::Length(p - groundSphere->GetTransform()->GetWorldPosition()) -
+			numa::Length(p - groundSphere->GetComponent<Transform>()->GetWorldPosition()) -
 			atmosphereData.groundRadius;
 		return height;
 	}

@@ -11,9 +11,6 @@
 #include "Framework/Materials/Metal.h"
 #include "Framework/Materials/ParticipatingMedium.h"
 
-#include "Framework/Geometry/Plane.h"
-#include "Framework/Geometry/Sphere.h"
-
 #include "Numa.h"
 #include "Vec.hpp"
 
@@ -38,9 +35,22 @@ namespace aurora {
 	}
 
 	void Application::Run() {
-		CreateDemoScene();
+		// CreateDemoScene();
+		CreateQuadLightDemoScene();
 		// 1. Multiple threads
-		RenderActiveScene(sceneManager->GetActiveScene());
+		// RenderActiveScene(sceneManager->GetActiveScene());
+		// TEST
+		std::shared_ptr<Scene> activeScene = sceneManager->GetActiveScene();
+		pathTracer->RenderSceneLoop(activeScene);
+		pathTracer->ToneMapReinhardtLuminance();
+		pathTracer->GammaCorrectPower12();
+
+		std::string fileName{activeScene->GetSceneName()};
+		fileName.append(".ppm");
+		std::filesystem::path filePath = exePath / fileName;
+		imageWriter->ChangeFileName(filePath.generic_string().c_str());
+		imageWriter->WritePixels(*pathTracer->GetPixelBuffer());
+		// TEST
 		// 2. Single thread
 		// RenderScene(sceneManager->GetActiveScene());
 	}
@@ -172,54 +182,55 @@ namespace aurora {
 		// std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight,
 		//                                                           FovType::VERTICAL, fov_y_deg);
 		std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight,
-			                                                      FovType::HORIZONTAL, fov_x_deg);
-		camera->SetTransform(cameraTransform);
+			                                                      FovType::HORIZONTAL, fov_x_deg);		
+		camera->AttachComponent<Transform>(cameraTransform);
 
 		// Actors
 
 		// Lambertian Sphere
 
 		std::shared_ptr<Actor> lambertianSphereActor = std::make_shared<Actor>("lambertian_sphere");
-		lambertianSphereActor->SetTransform(lambertianSphereTransform);
-		lambertianSphereActor->SetGeometry(lambertianSphereGeometry);
-		lambertianSphereActor->SetMaterial(lambertianSphereMaterial);
+		lambertianSphereActor->AttachComponent<Transform>(lambertianSphereTransform);
+		lambertianSphereActor->AttachComponent<Geometry>(lambertianSphereGeometry);
+		lambertianSphereActor->AttachComponent<Material>(lambertianSphereMaterial);
 
 		// Metal sphere (left)
 
 		std::shared_ptr<Actor> metalSphereActor = std::make_shared<Actor>("metal_sphere");
-		metalSphereActor->SetTransform(metalSphereTransform);
-		metalSphereActor->SetGeometry(metalSphereGeometry);
-		metalSphereActor->SetMaterial(dielectricMat);
+		metalSphereActor->AttachComponent<Transform>(metalSphereTransform);
+		metalSphereActor->AttachComponent<Geometry>(metalSphereGeometry);
+		metalSphereActor->AttachComponent<Material>(dielectricMat);
 
 		// Metal sphere (right)
 
 		std::shared_ptr<Actor> fuzzyMetalSphereActor = std::make_shared<Actor>("fuzzy_metal_sphere");
-		fuzzyMetalSphereActor->SetTransform(fuzzyMetalSphereTransform);
-		fuzzyMetalSphereActor->SetGeometry(fuzzyMetalSphereGeometry);
-		fuzzyMetalSphereActor->SetMaterial(fuzzyMetalSphereMaterial);
+		fuzzyMetalSphereActor->AttachComponent<Transform>(fuzzyMetalSphereTransform);
+		fuzzyMetalSphereActor->AttachComponent<Geometry>(fuzzyMetalSphereGeometry);
+		fuzzyMetalSphereActor->AttachComponent<Material>(fuzzyMetalSphereMaterial);
 
 		// Participating medium sphere volume (between the glass and lambertian spheres)
 
 		std::shared_ptr<Actor> participatingMediumSphereActor = std::make_shared<Actor>("participating_medium_sphere");
-		participatingMediumSphereActor->SetTransform(participatingMediumSphereTransform);
-		participatingMediumSphereActor->SetGeometry(participatingMediumSphereGeometry);
-		participatingMediumSphereActor->SetMaterial(participatingMediumSphereMaterial);
+		participatingMediumSphereActor->AttachComponent<Transform>(participatingMediumSphereTransform);
+		participatingMediumSphereActor->AttachComponent<Geometry>(participatingMediumSphereGeometry);
+		participatingMediumSphereActor->AttachComponent<Material>(participatingMediumSphereMaterial);
 
 		// Plane
 
 		std::shared_ptr<Actor> lambertianPlaneActor = std::make_shared<Actor>("lambertian_plane");
-		lambertianPlaneActor->SetTransform(lambertianPlaneTransform);
-		lambertianPlaneActor->SetGeometry(lambertianPlaneGeometry);
-		lambertianPlaneActor->SetMaterial(lambertianPlaneMaterial);
+		lambertianPlaneActor->AttachComponent<Transform>(lambertianPlaneTransform);
+		lambertianPlaneActor->AttachComponent<Geometry>(lambertianPlaneGeometry);
+		lambertianPlaneActor->AttachComponent<Material>(lambertianPlaneMaterial);
 		// lambertianPlaneActor->SetMaterial(fuzzyMetalSphereMaterial); // TEST!
 
 		numa::Vec3 dirLightCol{1.0f, 1.0f, 1.0f};
 		float dirLightStrength{25.0f};
 
-		std::shared_ptr<DirectionalLight> dirLightActor = std::make_shared<DirectionalLight>(
-			"Directional Light", dirLightCol, dirLightStrength);
-
-		dirLightActor->SetTransform(dirLightTransform);
+		std::shared_ptr<Actor> dirLightActor = std::make_shared<Actor>("directional_light");;
+		std::shared_ptr<DirectionalLight> dirLightComponent = std::make_shared<DirectionalLight>(dirLightCol,
+			                                                                                     dirLightStrength);
+		dirLightActor->AttachComponent<Transform>(dirLightTransform);
+		dirLightActor->AttachComponent<Light>(dirLightComponent);
 
 		// Create an atmosphere (a model of the Earth)
 
@@ -251,7 +262,8 @@ namespace aurora {
 		// demoScene->AddActor(participatingMediumSphereActor);
 		demoScene->AddActor(lambertianPlaneActor);
 
-		demoScene->AddLight(dirLightActor);
+		demoScene->AddActor(dirLightActor); // TODO: fix this!
+		demoScene->AddLight(dirLightComponent); // TODO: fix this!
 
 		// demoScene->SetAtmosphere(earthAtmosphere);
 
@@ -260,26 +272,29 @@ namespace aurora {
 	void Application::CreateQuadLightDemoScene() {
 		// Meshes
 
-		std::shared_ptr<Sphere> diffuseSphereMesh = std::make_shared<Sphere>(1.0f);
-		std::shared_ptr<Plane> diffusePlaneMesh = std::make_shared<Plane>();
+		std::shared_ptr<Sphere> diffuseSphereGeometry = std::make_shared<Sphere>(1.0f);
+		std::shared_ptr<Plane> diffusePlaneGeometry = std::make_shared<Plane>();
+
+		numa::Vec2 quadLightDimensions{2.0f, 1.0f};
+		std::shared_ptr<Plane> quadLightGeometry = std::make_shared<Plane>(quadLightDimensions);
 
 		// Transforms
 
 		std::shared_ptr<Transform> cameraTransform = std::make_shared<Transform>();
-		cameraTransform->SetWorldPosition(numa::Vec3{0.0f, 3.0f, 0.0f});
-		cameraTransform->SetRotation(numa::Vec3{-15.0f, 0.0f, 0.0f});
+		cameraTransform->SetWorldPosition(numa::Vec3{0.0f, 2.5f, 2.5f});
+		cameraTransform->SetRotation(numa::Vec3{-25.0f, 0.0f, 0.0f});
 
 		std::shared_ptr<Transform> diffuseSphereTransform = std::make_shared<Transform>();
-		diffuseSphereTransform->SetWorldPosition(numa::Vec3{2.0f, 1.0f, -3.0f});
+		diffuseSphereTransform->SetWorldPosition(numa::Vec3{-2.0f, 1.0f, -1.0f});
 		diffuseSphereTransform->SetRotation(numa::Vec3{0.0f, 0.0f, 0.0f});
 
 		std::shared_ptr<Transform> diffusePlaneTransform = std::make_shared<Transform>();
 		diffusePlaneTransform->SetWorldPosition(numa::Vec3{0.0f, 0.0f, 0.0f});
-		diffusePlaneTransform->SetRotation(numa::Vec3{0.0f, 0.0f, 0.0f});
+		diffusePlaneTransform->SetRotation(numa::Vec3{-90.0f, 0.0f, 0.0f});
 
 		std::shared_ptr<Transform> quadLightTransform = std::make_shared<Transform>();
-		quadLightTransform->SetWorldPosition(numa::Vec3{-2.0f, 1.0f, 0.0f});
-		quadLightTransform->SetRotation(numa::Vec3{0.0f, 90.0f, 0.0f});
+		quadLightTransform->SetWorldPosition(numa::Vec3{0.0f, 3.0f, -2.0f});
+		quadLightTransform->SetRotation(numa::Vec3{90.0f, 90.0f, 0.0f});
 
 		// Materials
 
@@ -300,8 +315,8 @@ namespace aurora {
 		// 800 x 600
 		// 400 x 240
 		
-		uint32_t cameraWidth{1920};
-		uint32_t cameraHeight{1080};
+		uint32_t cameraWidth{400};
+		uint32_t cameraHeight{240};
 
 		float fov_y_deg{90.0f};
 		float fov_x_deg{106.0f};
@@ -310,31 +325,48 @@ namespace aurora {
 		//                                                           FovType::VERTICAL, fov_y_deg);
 		std::shared_ptr<Camera> camera = std::make_shared<Camera>(cameraWidth, cameraHeight,
 			                                                      FovType::HORIZONTAL, fov_x_deg);
-		camera->SetTransform(cameraTransform);
+		camera->AttachComponent<Transform>(cameraTransform);
 
 		// Actors
 
 		// Diffuse Sphere
 
 		std::shared_ptr<Actor> diffuseSphereActor = std::make_shared<Actor>("diffuse_sphere");
-		diffuseSphereActor->SetTransform(diffuseSphereTransform);
-		diffuseSphereActor->SetGeometry(diffuseSphereMesh);
-		diffuseSphereActor->SetMaterial(diffuseSphereMaterial);
+		diffuseSphereActor->AttachComponent<Transform>(diffuseSphereTransform);
+		diffuseSphereActor->AttachComponent<Geometry>(diffuseSphereGeometry);
+		diffuseSphereActor->AttachComponent<Material>(diffuseSphereMaterial);
 
 		// Plane
 
 		std::shared_ptr<Actor> diffusePlaneActor = std::make_shared<Actor>("diffuse_plane");
-		diffusePlaneActor->SetTransform(diffusePlaneTransform);
-		diffusePlaneActor->SetGeometry(diffusePlaneMesh);
-		diffusePlaneActor->SetMaterial(diffusePlaneMaterial);
+		diffusePlaneActor->AttachComponent<Transform>(diffusePlaneTransform);
+		diffusePlaneActor->AttachComponent<Geometry>(diffusePlaneGeometry);
+		diffusePlaneActor->AttachComponent<Material>(diffusePlaneMaterial);
 
 		numa::Vec3 quadLightCol{1.0f, 1.0f, 1.0f};
 		float quadLightStrength{15.0f};
 
-		std::shared_ptr<DirectionalLight> quadLightActor = std::make_shared<DirectionalLight>("Quad Area Light",
-			                                                                                  quadLightCol,
-			                                                                                  quadLightStrength);
-		quadLightActor->SetTransform(quadLightTransform);
+		std::shared_ptr<Actor> quadLightActor = std::make_shared<Actor>("quad_light");;
+		std::shared_ptr<AreaLight> quadLightComponent = std::make_shared<AreaLight>(quadLightCol, quadLightStrength);
+		quadLightActor->AttachComponent<Transform>(quadLightTransform);
+		quadLightActor->AttachComponent<Geometry>(quadLightGeometry);
+		quadLightActor->AttachComponent<Light>(quadLightComponent);
+
+		// 3. Creating the scene and adding the actors.
+
+		std::shared_ptr<Scene> demoScene = std::make_shared<Scene>("demo_scene");
+		demoScene->SetCamera(camera);
+
+		demoScene->AddActor(diffuseSphereActor);
+		demoScene->AddActor(diffusePlaneActor);
+		demoScene->AddActor(quadLightActor);
+
+		demoScene->AddActor(quadLightActor); // TODO: fix this!
+		demoScene->AddLight(quadLightComponent); // TODO: fix this!
+
+		// demoScene->SetAtmosphere(earthAtmosphere);
+
+		sceneManager->SetActiveScene(demoScene);
 	}
 
 	void Application::RenderActiveScene(std::shared_ptr<Scene> scene) {
